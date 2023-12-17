@@ -7,10 +7,10 @@ import tkinter.filedialog
 import shutil
 
 root = tk.Tk()
-root.geometry("900x1200")
+root.geometry("1800x1000")
 
 # Calculate the width of the window and the spacing between the buttons
-window_width = 900
+window_width = 1800
 button_width = 100
 spacing = (window_width - 4 * button_width) / 5
 
@@ -23,13 +23,16 @@ first_photo = None
 
 deleted_images = [] 
 image_files = []
+actions = []
 
 # Create an empty label for the image
 image_label = tk.Label(root)
 image_label.place(x=window_width/2, y=600, anchor="center")
 
-def log_message(color):
+def delete_image(color):
     global first_image_file, first_image_path, first_image, first_photo, image_files, directory
+    # Save the current state before performing the action
+    actions.append(('delete', first_image_file, first_image_path, first_image, first_photo))
     if color == "delete" and first_image_file and first_image_path and os.path.exists(first_image_path):
         # Add the deleted image to the stack
         deleted_images.append((first_image_file, first_image_path, first_image, first_photo))
@@ -70,15 +73,17 @@ def update_image_count():
     image_count = len(image_files)
     image_count_label.config(text=f"Number of images: {image_count}")
 
-def undo_delete():
-    global first_image_file, first_image_path, first_image, first_photo
-    if deleted_images:  # If there are any deleted images
-        # Pop the last deleted image from the stack
-        first_image_file, first_image_path, first_image, first_photo = deleted_images.pop()
+def undo():
+    global first_image_file, first_image_path, first_image, first_photo, directory
+    if actions:  # If there are any actions to undo
+        # Pop the last action from the stack
+        action, first_image_file, first_image_path, first_image, first_photo, *extra = actions.pop()
+        if action == 'sort':  # If the last action was a sort
+            # Move the image back to the input directory
+            output_directory = extra[0]
+            shutil.move(os.path.join(output_directory, first_image_file), first_image_path)
         # Restore the image file
         first_image.save(first_image_path)
-        # Add the restored image file back to image_files
-        image_files.append(first_image_file)
         # Update the label to display the restored image
         first_photo = ImageTk.PhotoImage(first_image)
         image_label.config(image=first_photo)
@@ -124,7 +129,7 @@ input_directory_label = tk.Label(root, textvariable=output_directory_label_text3
 input_directory_label.place(x=4*spacing + 3*button_width, y=1050)
 
 # Create the "Undo" button
-undo_button = tk.Button(root, text="Undo", command=undo_delete)
+undo_button = tk.Button(root, text="Undo", command=undo)
 undo_button.place(x=spacing, y=1100, width=button_width)
 
 
@@ -151,6 +156,8 @@ def choose_sort_directory3():
 
 def sort_image(output_directory):
     global first_image_file, first_image_path, first_image, first_photo, directory
+    # Save the current state before performing the action
+    actions.append(('sort', first_image_file, first_image_path, first_image, first_photo, output_directory))
     if directory and first_image_file and first_image_path and os.path.exists(first_image_path):
         shutil.move(first_image_path, output_directory)
         print(f"{first_image_file} moved to {output_directory}!")  # Update the print statement to reflect the new directory
@@ -171,31 +178,31 @@ def sort_image(output_directory):
 
 
 # Create the buttons
-deleteButton = tk.Button(root, text="Delete", command=lambda: log_message("delete"), fg="red")
-deleteButton.place(x=spacing, y=1150, width=button_width)
+deleteButton = tk.Button(root, text="Delete", command=lambda: delete_image("delete"), fg="red")
+deleteButton.place(x=spacing, y=root.winfo_height() - 150, width=button_width, anchor="s")
 
 setMainDir = tk.Button(root, text="InputDir", command=choose_input_directory)
-setMainDir.place(x=spacing, y=1050, width=button_width)
+setMainDir.place(x=spacing, y=root.winfo_height() - 200, width=button_width, anchor="s")
 
 
 button1 = tk.Button(root, text="Send", command=lambda: sort_image(directory1))
-button1.place(x=2*spacing + button_width, y=1150, width=button_width)
+button1.place(x=2*spacing + button_width, y=root.winfo_height() - 150, width=button_width, anchor="s")
 
 setButton1 = tk.Button(root, text="outputDir1", command=choose_sort_directory1)
-setButton1.place(x=2*spacing + button_width, y=1100, width=button_width)
+setButton1.place(x=2*spacing + button_width, y=root.winfo_height() - 200, width=button_width, anchor="s")
 
 
 button2 = tk.Button(root, text="Send", command=lambda: sort_image(directory2))
-button2.place(x=3*spacing + 2*button_width, y=1150, width=button_width)
+button2.place(x=3*spacing + 2*button_width, y=root.winfo_height() - 150, width=button_width, anchor="s")
 
 setButton2 = tk.Button(root, text="outputDir2", command=choose_sort_directory2)
-setButton2.place(x=3*spacing + 2*button_width, y=1100, width=button_width)
+setButton2.place(x=3*spacing + 2*button_width, y=root.winfo_height() - 200, width=button_width, anchor="s")
 
 
 button3 = tk.Button(root, text="Send", command=lambda: sort_image(directory3))
-button3.place(x=4*spacing + 3*button_width, y=1150, width=button_width)
+button3.place(x=4*spacing + 3*button_width, y=root.winfo_height() - 150, width=button_width, anchor="s")
 
 setButton3 = tk.Button(root, text="outputDir3", command=choose_sort_directory3)
-setButton3.place(x=4*spacing + 3*button_width, y=1100, width=button_width)
+setButton3.place(x=4*spacing + 3*button_width, y=root.winfo_height() - 200, width=button_width, anchor="s")
 
 root.mainloop()
