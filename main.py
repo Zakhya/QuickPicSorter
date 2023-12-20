@@ -38,20 +38,23 @@ third_image_path = None
 third_image = None
 third_photo = None
 
+# display_img1 = None
+# display_img2 = None
+# display_img3 = None
+
 deleted_images = [] 
 image_files = []
 actions = []
 
-# Create an empty label for the image
 image_label = tk.Label(root)
-image_label.place(x=window_width/2 - 600, y=600, anchor="center")
+image_label.place(x=window_width/2 - 600, y=0, anchor="n")
 
-# Create two more labels for the additional images
 second_image_label = tk.Label(root)
-second_image_label.place(x=window_width/2, y=600, anchor="center")
+second_image_label.place(x=window_width/2, y=0, anchor="n")
 
 third_image_label = tk.Label(root)
-third_image_label.place(x=window_width/2 + 600, y=600, anchor="center")
+third_image_label.place(x=window_width/2 + 600, y=0, anchor="n")
+
 
 
 def delete_image(color):
@@ -62,6 +65,8 @@ def delete_image(color):
 
     # Move the first image to the temporary directory
     if os.path.exists(first_image_path):
+        first_image.close()
+        
         shutil.move(first_image_path, os.path.join(temp_dir, first_image_file))
 
         # Store the action in the actions list
@@ -92,46 +97,57 @@ def delete_image(color):
             third_image_file = image_files[2]
             third_image_path = os.path.join(directory, third_image_file)
             third_image = Image.open(third_image_path)
-            third_photo = ImageTk.PhotoImage(third_image)
+            third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image_path))
             third_image_label.config(image=third_photo)
             third_image_label.image = third_photo
+
+def resize_image_for_display(input_image_path):
+    img = Image.open(input_image_path)
+    width, height = img.size
+    if width > 512:
+        new_height = int(height * 512 / width)
+        img = img.resize((512, new_height), Image.LANCZOS)
+    return img
 
 def choose_input_directory():
     global first_image_file, first_image_path, first_image, first_photo
     global second_image_file, second_image_path, second_image, second_photo
     global third_image_file, third_image_path, third_image, third_photo
     global image_files, directory
+    global display_img1, display_img2, display_img3
 
     directory = tkinter.filedialog.askdirectory()
-    if directory:
+    if directory:  # Check if directory is not None
+        directory_name = os.path.basename(directory)  # Get the name of the directory
+        input_directory_label_text.set(directory_name)
         files = os.listdir(directory)
         image_files = [file for file in files if file.endswith(('.png', '.jpg', '.jpeg'))]
-        if image_files:
-            # Load the first image
-            first_image_file = image_files[0]
-            first_image_path = os.path.join(directory, first_image_file)
-            first_image = Image.open(first_image_path)
-            first_photo = ImageTk.PhotoImage(first_image)
-            image_label.config(image=first_photo)
-            image_label.image = first_photo
+    if image_files:
+        # Load the first image
+        first_image_file = image_files[0]
+        first_image_path = os.path.join(directory, first_image_file)
+        first_image = Image.open(first_image_path)
+        first_photo = ImageTk.PhotoImage(resize_image_for_display(first_image_path))
+        image_label.config(image=first_photo)
+        image_label.image = first_photo
 
-            # Load the second image if it exists
-            if len(image_files) > 1:
-                second_image_file = image_files[1]
-                second_image_path = os.path.join(directory, second_image_file)
-                second_image = Image.open(second_image_path)
-                second_photo = ImageTk.PhotoImage(second_image)
-                second_image_label.config(image=second_photo)
-                second_image_label.image = second_photo
+        # Load the second image if it exists
+        if len(image_files) > 1:
+            second_image_file = image_files[1]
+            second_image_path = os.path.join(directory, second_image_file)
+            second_image = Image.open(second_image_path)
+            second_photo = ImageTk.PhotoImage(resize_image_for_display(second_image_path))
+            second_image_label.config(image=second_photo)
+            second_image_label.image = second_photo
 
-            # Load the third image if it exists
-            if len(image_files) > 2:
-                third_image_file = image_files[2]
-                third_image_path = os.path.join(directory, third_image_file)
-                third_image = Image.open(third_image_path)
-                third_photo = ImageTk.PhotoImage(third_image)
-                third_image_label.config(image=third_photo)
-                third_image_label.image = third_photo
+        # Load the third image if it exists
+        if len(image_files) > 2:
+            third_image_file = image_files[2]
+            third_image_path = os.path.join(directory, third_image_file)
+            third_image = Image.open(third_image_path)
+            third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image_path))
+            third_image_label.config(image=third_photo)
+            third_image_label.image = third_photo
 
 def update_image_count():
     image_count = len(image_files)
@@ -152,7 +168,7 @@ def load_next_image():
         first_image_file = image_files[0]
         first_image_path = os.path.join(directory, first_image_file)
         first_image = Image.open(first_image_path)
-        first_photo = ImageTk.PhotoImage(first_image)
+        first_photo = ImageTk.PhotoImage(resize_image_for_display(first_image))
         image_label.config(image=first_photo)
         image_label.image = first_photo
 
@@ -161,7 +177,7 @@ def load_next_image():
             second_image_file = image_files[1]
             second_image_path = os.path.join(directory, second_image_file)
             second_image = Image.open(second_image_path)
-            second_photo = ImageTk.PhotoImage(second_image)
+            second_photo = ImageTk.PhotoImage(resize_image_for_display(second_image))
             second_image_label.config(image=second_photo)
             second_image_label.image = second_photo
 
@@ -170,7 +186,7 @@ def load_next_image():
             third_image_file = image_files[2]
             third_image_path = os.path.join(directory, third_image_file)
             third_image = Image.open(third_image_path)
-            third_photo = ImageTk.PhotoImage(third_image)
+            third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image))
             third_image_label.config(image=third_photo)
             third_image_label.image = third_photo
 
@@ -267,6 +283,7 @@ def sort_image(output_directory):
     # Save the current state before performing the action
     actions.append(('sort', first_image_file, image_files.index(first_image_file), output_directory))
     if directory and first_image_file and first_image_path and os.path.exists(first_image_path):
+        first_image.close()
         shutil.move(first_image_path, output_directory)
         print(f"{first_image_file} moved to {output_directory}!")  # Update the print statement to reflect the new directory
         if first_image_file in image_files:  # Check that first_image_file is in image_files
@@ -292,8 +309,7 @@ def sort_image(output_directory):
             if len(image_files) > 2:
                 third_image_file = image_files[2]
                 third_image_path = os.path.join(directory, third_image_file)
-                third_image = Image.open(third_image_path)
-                third_photo = ImageTk.PhotoImage(third_image)
+                third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image_path))
                 third_image_label.config(image=third_photo)
                 third_image_label.image = third_photo
 
