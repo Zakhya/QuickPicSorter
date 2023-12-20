@@ -168,7 +168,7 @@ def load_next_image():
         first_image_file = image_files[0]
         first_image_path = os.path.join(directory, first_image_file)
         first_image = Image.open(first_image_path)
-        first_photo = ImageTk.PhotoImage(resize_image_for_display(first_image))
+        first_photo = ImageTk.PhotoImage(resize_image_for_display(first_image_path))
         image_label.config(image=first_photo)
         image_label.image = first_photo
 
@@ -177,7 +177,7 @@ def load_next_image():
             second_image_file = image_files[1]
             second_image_path = os.path.join(directory, second_image_file)
             second_image = Image.open(second_image_path)
-            second_photo = ImageTk.PhotoImage(resize_image_for_display(second_image))
+            second_photo = ImageTk.PhotoImage(resize_image_for_display(second_image_path))
             second_image_label.config(image=second_photo)
             second_image_label.image = second_photo
 
@@ -186,7 +186,7 @@ def load_next_image():
             third_image_file = image_files[2]
             third_image_path = os.path.join(directory, third_image_file)
             third_image = Image.open(third_image_path)
-            third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image))
+            third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image_path))
             third_image_label.config(image=third_photo)
             third_image_label.image = third_photo
 
