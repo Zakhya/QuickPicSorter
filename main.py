@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 import tkinter.filedialog
 import shutil
 import tempfile
+import json
 
 # Create a temporary directory
 temp_dir = tempfile.mkdtemp()
@@ -23,10 +24,22 @@ spacing = (window_width - 4 * button_width) / 5
 
 directory = ""
 
+
+# Path to the JSON file
+file_path_default_task = 'defaultTask.json'
+
+data = None
+# Load the data from the JSON file
+with open(file_path_default_task, 'r') as file:
+    data = json.load(file)
+
+prompt_list_file_path = 'promptList.json'
+
 first_image_file = None
 first_image_path = None
 first_image = None
 first_photo = None
+first_image_info = None
 
 second_image_file = None
 second_image_path = None
@@ -110,7 +123,7 @@ def resize_image_for_display(input_image_path):
     return img
 
 def choose_input_directory():
-    global first_image_file, first_image_path, first_image, first_photo
+    global first_image_file, first_image_path, first_image, first_photo, first_image_info
     global second_image_file, second_image_path, second_image, second_photo
     global third_image_file, third_image_path, third_image, third_photo
     global image_files, directory
@@ -130,6 +143,12 @@ def choose_input_directory():
         first_photo = ImageTk.PhotoImage(resize_image_for_display(first_image_path))
         image_label.config(image=first_photo)
         image_label.image = first_photo
+        first_image_info = first_image.info
+
+       
+                    
+        print(first_image_info)
+
 
         # Load the second image if it exists
         if len(image_files) > 1:
@@ -275,11 +294,85 @@ def choose_sort_directory3():
 
 
 def sort_image(output_directory):
-    global first_image_file, first_image_path, first_image, first_photo
+    global first_image_file, first_image_path, first_image, first_photo, first_image_info
     global second_image_file, second_image_path, second_image, second_photo
     global third_image_file, third_image_path, third_image, third_photo
-    global directory, image_files, actions
+    global directory, image_files, actions, data
 
+    if not os.path.isfile(prompt_list_file_path):
+        with open(prompt_list_file_path, 'w') as file:
+
+            for item in data:  
+                if 'parameters' in item:
+                    parameters = item['parameters'].split(', ')
+
+                    # Initialize an empty dictionary to store parameter variables
+                    parameter_vars = {}
+
+                    # Loop through the parameters
+                    for param in parameters:
+                        key_value = param.split(': ')
+                        
+                        # Handling cases where parameter is a single value or a key-value pair
+                        if len(key_value) == 2:
+                            key, value = key_value
+                            parameter_vars[key.strip()] = value.strip()
+                        else:
+                            parameter_vars['param_' + str(index)] = param.strip()
+
+            split_params = first_image_info['parameters'].split('\n')
+            prompt, negative_prompt, steps, sampler, seed, cfg_scale, size, model_hash, model, lora_hashes, width, height = None, None, None, None, None, None, None, None, None, None, None, None
+
+            print(type(data[0]))
+            # print(data[0])
+            print(type(data[0]['params']))
+            # print(data[0]['params'])
+            print(type(data[0]['params']['args']))
+            # print(data[0]['params']['args'])
+
+            for index, part in enumerate(split_params):
+                if index == 0:
+                    prompt = part
+                if index == 1:
+                    negative_prompt = part.lstrip("Negative prompt: ")
+                if index == 2:
+                    key_value_pairs = part.split(', ')
+                    for pair in key_value_pairs:
+                        key, value = pair.split(': ', 1)
+                        if 'Prompt' in key:
+                            prompt = value
+                        if 'Steps' in key:
+                            steps = value
+                        if 'Sampler' in key:
+                            sampler = value
+                        if 'CFG scale' in key:
+                            cfg_scale = value
+                        if 'Seed' in key:
+                            seed = value
+                        if 'Size' in key:
+                            size = value
+                            sizeArr = size.split('x')
+                            print(f"sizeArr: {sizeArr}")
+                            width = sizeArr[0]
+                            height = sizeArr[1]
+                        if 'Model hash' in key:
+                            model_hash = value
+                        if 'Model' in key:
+                            model = value
+                        if 'Lora Hashes' in key:
+                            lora_hashes = value
+
+
+            data[0]['params']['args']['prompt'] = prompt
+            data[0]['params']['args']['negative_prompt'] = negative_prompt
+            data[0]['params']['args']['steps'] = steps
+            data[0]['params']['args']['sampler_name'] = sampler
+            data[0]['params']['args']['cfg_scale'] = cfg_scale
+            data[0]['params']['args']['height'] = height
+            data[0]['params']['args']['width'] = width
+            print(data)
+            json.dump(data, file)
+    
     # Save the current state before performing the action
     actions.append(('sort', first_image_file, image_files.index(first_image_file), output_directory))
     if directory and first_image_file and first_image_path and os.path.exists(first_image_path):
@@ -322,6 +415,8 @@ def sort_image(output_directory):
             second_image_label.image = None
             third_image_label.config(image=None)
             third_image_label.image = None
+    update_image_count()
+    
 
 
 def update_button_positions(event=None):
