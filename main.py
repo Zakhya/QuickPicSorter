@@ -8,13 +8,19 @@ import tkinter.filedialog
 import shutil
 import tempfile
 import json
+import requests
+import json
+import io
+import base64
+import string
+import random
 
 # Create a temporary directory
 temp_dir = tempfile.mkdtemp()
 
 root = tk.Tk()
 root.geometry("1800x1000")
-
+root.configure(background='black')
 
 # Calculate the width of the window and the spacing between the buttons
 window_width = 1800
@@ -29,12 +35,14 @@ directory = ""
 file_path_default_task = 'defaultTask.json'
 
 data = None
-# Load the data from the JSON file
-with open(file_path_default_task, 'r') as file:
-    data = json.load(file)
+
 
 prompt_list_file_path = 'promptList.json'
+face_model_params = None
 
+pageExists = False
+seed = None
+image_metadata = None
 first_image_file = None
 first_image_path = None
 first_image = None
@@ -58,6 +66,7 @@ third_photo = None
 deleted_images = [] 
 image_files = []
 actions = []
+prompt_list = None
 
 image_label = tk.Label(root)
 image_label.place(x=window_width/2 - 600, y=0, anchor="n")
@@ -144,11 +153,6 @@ def choose_input_directory():
         image_label.config(image=first_photo)
         image_label.image = first_photo
         first_image_info = first_image.info
-
-       
-                    
-        print(first_image_info)
-
 
         # Load the second image if it exists
         if len(image_files) > 1:
@@ -297,81 +301,42 @@ def sort_image(output_directory):
     global first_image_file, first_image_path, first_image, first_photo, first_image_info
     global second_image_file, second_image_path, second_image, second_photo
     global third_image_file, third_image_path, third_image, third_photo
-    global directory, image_files, actions, data
+    global directory, image_files, actions, data, prompt_list, image_metadata, seed, pageExists
 
-    if not os.path.isfile(prompt_list_file_path):
-        with open(prompt_list_file_path, 'w') as file:
+    pageExists = False
 
-            for item in data:  
-                if 'parameters' in item:
-                    parameters = item['parameters'].split(', ')
+    with Image.open(first_image_path) as img:
+        # Get the width and height of the image
+        image_metadata = img.info
+        parameters = image_metadata.get('parameters')
 
-                    # Initialize an empty dictionary to store parameter variables
-                    parameter_vars = {}
+    # If 'parameters' key is not present in the dictionary, parameters will be None
+    if parameters is not None:
+        # Split the parameters string into individual parameters
+        parameters_list = parameters.split(', ')
 
-                    # Loop through the parameters
-                    for param in parameters:
-                        key_value = param.split(': ')
-                        
-                        # Handling cases where parameter is a single value or a key-value pair
-                        if len(key_value) == 2:
-                            key, value = key_value
-                            parameter_vars[key.strip()] = value.strip()
-                        else:
-                            parameter_vars['param_' + str(index)] = param.strip()
+        # Loop through the parameters to find the seed
+        for param in parameters_list:
+            if 'Seed' in param:
+                seed = int(param.split(': ')[1])  # Extract the seed value and convert it to an integer
+                print(f'seed: {seed}')
+                break
 
-            split_params = first_image_info['parameters'].split('\n')
-            prompt, negative_prompt, steps, sampler, seed, cfg_scale, size, model_hash, model, lora_hashes, width, height = None, None, None, None, None, None, None, None, None, None, None, None
+    else:
+        print("No parameters found in image metadata")
 
-            print(type(data[0]))
-            # print(data[0])
-            print(type(data[0]['params']))
-            # print(data[0]['params'])
-            print(type(data[0]['params']['args']))
-            # print(data[0]['params']['args'])
-
-            for index, part in enumerate(split_params):
-                if index == 0:
-                    prompt = part
-                if index == 1:
-                    negative_prompt = part.lstrip("Negative prompt: ")
-                if index == 2:
-                    key_value_pairs = part.split(', ')
-                    for pair in key_value_pairs:
-                        key, value = pair.split(': ', 1)
-                        if 'Prompt' in key:
-                            prompt = value
-                        if 'Steps' in key:
-                            steps = value
-                        if 'Sampler' in key:
-                            sampler = value
-                        if 'CFG scale' in key:
-                            cfg_scale = value
-                        if 'Seed' in key:
-                            seed = value
-                        if 'Size' in key:
-                            size = value
-                            sizeArr = size.split('x')
-                            print(f"sizeArr: {sizeArr}")
-                            width = sizeArr[0]
-                            height = sizeArr[1]
-                        if 'Model hash' in key:
-                            model_hash = value
-                        if 'Model' in key:
-                            model = value
-                        if 'Lora Hashes' in key:
-                            lora_hashes = value
+    # Load the data from the JSON file
+    with open(file_path_default_task, 'r') as file:
+        data = json.load(file)
 
 
-            data[0]['params']['args']['prompt'] = prompt
-            data[0]['params']['args']['negative_prompt'] = negative_prompt
-            data[0]['params']['args']['steps'] = steps
-            data[0]['params']['args']['sampler_name'] = sampler
-            data[0]['params']['args']['cfg_scale'] = cfg_scale
-            data[0]['params']['args']['height'] = height
-            data[0]['params']['args']['width'] = width
-            print(data)
-            json.dump(data, file)
+    for function_index in range(4):
+        if os.path.isfile(prompt_list_file_path):
+            with open(prompt_list_file_path, 'r') as file:
+                prompt_list = json.load(file)
+                pageExists = True
+        process_parameters(pageExists, prompt_list, data, function_index)
+       
     
     # Save the current state before performing the action
     actions.append(('sort', first_image_file, image_files.index(first_image_file), output_directory))
@@ -417,7 +382,96 @@ def sort_image(output_directory):
             third_image_label.image = None
     update_image_count()
     
+def process_parameters(pageExists, prompt_list, data, function_index):
+    
+    print(f'function_index: {function_index}')
+    prompt, negative_prompt, steps, sampler, cfg_scale, size, model_hash, model, lora_hashes, width, height, denoising_strength, task_id = None, None, None, None, None, None, None, None, None, None, None, None, None
+    with open(prompt_list_file_path, 'w') as file:
 
+        for item in data:  
+            print(f"item: {item}")
+            if 'parameters' in item:
+                parameters = item['parameters'].split(', ')
+
+                # Initialize an empty dictionary to store parameter variables
+                parameter_vars = {}
+                # Loop through the parameters
+                for param in parameters:
+                    key_value = param.split(': ')
+                    
+                    # Handling cases where parameter is a single value or a key-value pair
+                    if len(key_value) == 2:
+                        key, value = key_value
+                        parameter_vars[key.strip()] = value.strip()
+                    else:
+                        parameter_vars['param_' + str(index)] = param.strip()
+
+        split_params = first_image_info['parameters'].split('\n')
+        for index, part in enumerate(split_params):
+            if index == 0:
+                prompt = part
+            if index == 1:
+                negative_prompt = part.lstrip("Negative prompt: ")
+            if index == 2:
+                key_value_pairs = part.split(', ')
+                for pair in key_value_pairs:
+                    key, value = pair.split(': ', 1)
+                    if 'Prompt' in key:
+                        prompt = value
+                    if 'Steps' in key:
+                        steps = int(value)
+                    if 'Sampler' in key:
+                        sampler = value
+                    if 'CFG scale' in key:
+                        cfg_scale = float(value)
+                    if 'Seed' in key:
+                        seed = int(value)
+                    if 'Size' in key:
+                        size = value
+                        sizeArr = size.split('x')
+                        print(f"sizeArr: {sizeArr}")
+                        width = int(sizeArr[0])
+                        height = int(sizeArr[1])
+                    if 'Model hash' in key:
+                        model_hash = value
+                    if 'Model' in key:
+                        model = value
+                    if 'Lora Hashes' in key:
+                        lora_hashes = value
+                
+                if function_index == 0:
+                    denoising_strength = 0.25
+                elif function_index == 1:
+                    denoising_strength = 0.35
+                elif function_index == 2:
+                    denoising_strength = 0.45
+                elif function_index == 3:
+                    denoising_strength = 0.55
+                data[0]['params']['args']['seed'] = seed
+                data[0]['params']['args']['prompt'] = prompt
+                data[0]['params']['args']['negative_prompt'] = negative_prompt
+                data[0]['params']['args']['steps'] = steps
+                data[0]['params']['args']['sampler_name'] = sampler
+                data[0]['params']['args']['cfg_scale'] = cfg_scale
+                data[0]['params']['args']['height'] = height
+                data[0]['params']['args']['width'] = width
+                data[0]['params']['args']['denoising_strength'] = denoising_strength
+                if not face_model_params:
+                    raise Exception("No face model params")
+                data[0]['script_params'] = face_model_params
+
+                characters = string.ascii_lowercase + string.digits  # Define the character set
+
+                task_id = ''.join(random.choice(characters) for _ in range(15))
+                data[0]['id'] = f'task({task_id})'
+                data[0]['params']['args']['id_task'] = f'task({task_id})'
+                if pageExists == True:
+                    print(f'prompt_list: {prompt_list}')
+                    prompt_list.extend(data)
+                    json.dump(prompt_list, file)
+                else:
+                    print(f'data:{data}')
+                    json.dump(data, file)
 
 def update_button_positions(event=None):
     # Get the new window height
@@ -433,13 +487,24 @@ def update_button_positions(event=None):
     button2.place(x=3*spacing + 2*button_width, y=window_height - button_height, width=button_width, anchor="s")
     setButton2.place(x=3*spacing + 2*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
     button3.place(x=4*spacing + 3*button_width, y=window_height - button_height , width=button_width, anchor="s")
-    setButton3.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+    face_model_text_box.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
 
      # Place the labels
     input_directory_label.place(x=spacing - 50, y=window_height - (3 * button_height + button_spacing + 20))
     output_directory_label1.place(x=2*spacing + button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
     output_directory_label2.place(x=3*spacing + 2*button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
     output_directory_label3.place(x=4*spacing + 3*button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
+
+def set_face_model():
+    global face_model_text_box, face_model_params
+    with open("face_model_params.json", "r") as file:
+        full_face_model_params = json.load(file)
+        face_model_text = face_model_text_box.get("1.0", "end-1c")
+
+        if face_model_text in full_face_model_params:
+            face_model_params = full_face_model_params[face_model_text]
+            print(face_model_params)
+
 
 # Delay the placement of the buttons until after the window is displayed
 root.after(100, update_button_positions)
@@ -479,12 +544,12 @@ setButton2 = tk.Button(root, text="outputDir2", command=choose_sort_directory2)
 setButton2.place(x=3*spacing + 2*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
 
 # button3
-button3 = tk.Button(root, text="Send", command=lambda: sort_image(directory3))
+button3 = tk.Button(root, text="Send", command=set_face_model)
 button3.place(x=4*spacing + 3*button_width, y=window_height - button_height , width=button_width, anchor="s")
 
-# setButton3
-setButton3 = tk.Button(root, text="outputDir3", command=choose_sort_directory3)
-setButton3.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+# face_model_text_box
+face_model_text_box = tk.Text(root)
+face_model_text_box.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=800, height=50, anchor="s")
 
 
 root.bind('<Configure>', update_button_positions)
