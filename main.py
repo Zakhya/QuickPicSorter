@@ -1,5 +1,6 @@
 
 import tkinter as tk
+from tkinter import ttk
 from PIL import Image, ImageTk
 from PIL import Image, ImageDraw
 import os
@@ -66,7 +67,11 @@ third_photo = None
 deleted_images = [] 
 image_files = []
 actions = []
+history = {}
 prompt_list = None
+
+upscale_bool = False
+
 
 image_label = tk.Label(root)
 image_label.place(x=window_width/2 - 600, y=0, anchor="n")
@@ -131,14 +136,14 @@ def resize_image_for_display(input_image_path):
         img = img.resize((512, new_height), Image.LANCZOS)
     return img
 
-def choose_input_directory():
+def choose_input_directory(from_history = False):
     global first_image_file, first_image_path, first_image, first_photo, first_image_info
     global second_image_file, second_image_path, second_image, second_photo
     global third_image_file, third_image_path, third_image, third_photo
     global image_files, directory
     global display_img1, display_img2, display_img3
-
-    directory = tkinter.filedialog.askdirectory()
+    if from_history == False:
+        directory = tkinter.filedialog.askdirectory()
     if directory:  # Check if directory is not None
         directory_name = os.path.basename(directory)  # Get the name of the directory
         input_directory_label_text.set(directory_name)
@@ -270,11 +275,6 @@ output_directory_label2.place(x=3*spacing + 2*button_width, y=1050)
 output_directory_label_text3 = tk.StringVar()
 output_directory_label_text3.set("None")
 
-# Create the labels
-output_directory_label3 = tk.Label(root, textvariable=output_directory_label_text3)
-output_directory_label3.place(x=4*spacing + 3*button_width, y=1050)
-
-
 
 # Create a variable for the directory
 directory1 = None
@@ -329,13 +329,13 @@ def sort_image(output_directory):
     with open(file_path_default_task, 'r') as file:
         data = json.load(file)
 
-
-    for function_index in range(4):
-        if os.path.isfile(prompt_list_file_path):
-            with open(prompt_list_file_path, 'r') as file:
-                prompt_list = json.load(file)
-                pageExists = True
-        process_parameters(pageExists, prompt_list, data, function_index)
+    if upscale_bool == True:
+        for function_index in range(5):
+            if os.path.isfile(prompt_list_file_path):
+                with open(prompt_list_file_path, 'r') as file:
+                    prompt_list = json.load(file)
+                    pageExists = True
+            process_parameters(pageExists, prompt_list, data, function_index)
        
     
     # Save the current state before performing the action
@@ -440,13 +440,15 @@ def process_parameters(pageExists, prompt_list, data, function_index):
                         lora_hashes = value
                 
                 if function_index == 0:
-                    denoising_strength = 0.25
+                    denoising_strength = 0.28
                 elif function_index == 1:
-                    denoising_strength = 0.35
+                    denoising_strength = 0.38
                 elif function_index == 2:
-                    denoising_strength = 0.45
-                elif function_index == 3:
                     denoising_strength = 0.55
+                elif function_index == 3:
+                    denoising_strength = 0.70
+                elif function_index == 4:
+                    denoising_strength = 0.85
                 data[0]['params']['args']['seed'] = seed
                 data[0]['params']['args']['prompt'] = prompt
                 data[0]['params']['args']['negative_prompt'] = negative_prompt
@@ -487,24 +489,65 @@ def update_button_positions(event=None):
     button2.place(x=3*spacing + 2*button_width, y=window_height - button_height, width=button_width, anchor="s")
     setButton2.place(x=3*spacing + 2*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
     button3.place(x=4*spacing + 3*button_width, y=window_height - button_height , width=button_width, anchor="s")
-    face_model_text_box.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+    face_model_dropdown.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+    button4.place(x=4*spacing + 3*button_width, y=window_height - (button_height + button_spacing * 2.5), width=button_width, anchor="s")
+    button5.place(x=4*spacing + 3*button_width, y=window_height - (button_height + button_spacing * 3.5), width=button_width, anchor="s")
 
      # Place the labels
     input_directory_label.place(x=spacing - 50, y=window_height - (3 * button_height + button_spacing + 20))
     output_directory_label1.place(x=2*spacing + button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
     output_directory_label2.place(x=3*spacing + 2*button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
-    output_directory_label3.place(x=4*spacing + 3*button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
 
-def set_face_model():
-    global face_model_text_box, face_model_params
+def set_face_model(event):
+    global face_model_dropdown, face_model_params
     with open("face_model_params.json", "r") as file:
         full_face_model_params = json.load(file)
-        face_model_text = face_model_text_box.get("1.0", "end-1c")
+        face_model_text = face_model_dropdown.get()
+        output_directory_label_text3.set(face_model_text)
 
         if face_model_text in full_face_model_params:
             face_model_params = full_face_model_params[face_model_text]
-            print(face_model_params)
 
+def save_history():
+    global history
+    history['input_dir'] = directory
+    print(f"history['input_dir']: {history['input_dir']}")
+    history['output_dir'] = directory1
+
+    history['output_dir2'] = directory2
+    history['face_model_params'] = face_model_params
+    history['face_model'] = face_model_dropdown.get()
+    history['upscale_bool'] = upscale_bool
+    print(f"history: {history}")
+    with open('history.json', 'w') as file:        
+        json.dump(history, file)
+
+def load_history():
+    global history, directory, directory1, directory2, face_model_params, upscale_bool
+    with open('history.json', 'r') as file:
+        history = json.load(file)
+        print(f"history: {history}")
+        if 'input_dir' in history and history['input_dir'] != None:
+            directory = history['input_dir']
+            input_directory_label_text.set(f"{os.path.basename(directory)}")
+        if 'output_dir' in history and history['output_dir'] != None:
+            directory1 = history['output_dir']
+            output_directory_label_text1.set(f"{os.path.basename(directory1)}")
+        if 'output_dir2' in history and history['output_dir2'] != None:
+            directory2 = history['output_dir2']
+            output_directory_label_text2.set(f"{os.path.basename(directory2)}")
+        if 'face_model' in history and history['face_model'] != None:
+            face_model_params = history['face_model_params']
+            face_model_dropdown.set(f"{history['face_model']}")
+        if 'upscale_bool' in history and history['upscale_bool'] != None:
+            upscale_bool = history['upscale_bool']
+            if upscale_bool == True:
+                button3.config(bg="green", fg="white")
+                button3.config(activebackground='red', activeforeground='grey')
+            else:    
+                button3.config(bg="red", fg="grey")
+                button3.config(activebackground='green', activeforeground='white')
+        choose_input_directory(True)
 
 # Delay the placement of the buttons until after the window is displayed
 root.after(100, update_button_positions)
@@ -543,13 +586,51 @@ button2.place(x=3*spacing + 2*button_width, y=window_height - button_height, wid
 setButton2 = tk.Button(root, text="outputDir2", command=choose_sort_directory2)
 setButton2.place(x=3*spacing + 2*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
 
+def toggle_button3(event=None):
+    global upscale_bool
+    # Check the current color of the button
+    if upscale_bool == True:
+        upscale_bool = False
+        button3.config(bg="red", fg="grey")
+        button3.config(activebackground='green', activeforeground='white')
+    else:
+        upscale_bool = True
+        button3.config(bg="green", fg="white")
+        button3.config(activebackground='red', activeforeground='grey')
 # button3
-button3 = tk.Button(root, text="Send", command=set_face_model)
+button3 = tk.Button(root, text="Upscale", command=toggle_button3, activebackground="green", activeforeground="white")
 button3.place(x=4*spacing + 3*button_width, y=window_height - button_height , width=button_width, anchor="s")
+button3.config(bg="red", fg="grey")
+ 
+button4 = tk.Button(root, text="Save", command=save_history, activebackground="green", activeforeground="white")
+button4.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, anchor="s")
 
-# face_model_text_box
-face_model_text_box = tk.Text(root)
-face_model_text_box.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=800, height=50, anchor="s")
+button5 = tk.Button(root, text="Load", command=load_history, activebackground="green", activeforeground="white")
+button5.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, anchor="s")
+
+# face_model_dropdown
+# Read the keys from the JSON file
+face_model_keys = []
+with open('face_model_params.json') as f:
+    face_model_data = json.load(f)
+face_model_keys = list(face_model_data.keys())
+# Create a StringVar to hold the selected value
+selected_key = tk.StringVar()
+
+# Create the dropdown
+face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
+
+# Populate the dropdown with the keys
+face_model_dropdown['values'] = face_model_keys
+
+# Set the first key as the initially selected value
+if face_model_keys:
+    face_model_dropdown.current(0)
+
+face_model_dropdown.bind("<<ComboboxSelected>>", set_face_model)
+set_face_model(event=None)
+# Place the dropdown in the window
+face_model_dropdown.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=800, height=50, anchor="s")
 
 
 root.bind('<Configure>', update_button_positions)
