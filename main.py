@@ -29,6 +29,10 @@ directory = ""
 file_path_default_task = 'defaultTask.json'
 
 data = None
+# Load the data from the JSON file
+with open(file_path_default_task, 'r') as file:
+    data = json.load(file)
+
 page_name = "main"
 
 
@@ -71,7 +75,7 @@ prompt_positive_text_box = ''
 prompt_negative_text_box = ''
 prompt_steps_text_box = 25
 prompt_sampler_text_box = 'DPM++ 2M SDE Karras'
-prompt_cfg_scale_text_box = 7
+prompt_cfg_scale_text_box = 7.5
 prompt_size_height_box = 512
 prompt_size_width_box = 512
 prompt_id = None
@@ -83,15 +87,22 @@ prompt_custom_params = None
 
 PROMPT_POSITIVE_DEFAULT = ''
 PROMPT_NEGATIVE_DEFAULT = ''
-PROMPT_STEPS_DEFAULT = 25
+PROMPT_STEPS_DEFAULT = tk.IntVar()
+PROMPT_STEPS_DEFAULT.set(25)
 PROMPT_SAMPLER_DEFAULT = 'DPM++ 2M SDE Karras'
-PROMPT_CFG_SCALE_DEFAULT = 7
-PROMPT_SIZE_HEIGHT_DEFAULT = 512
-PROMPT_SIZE_WIDTH_DEFAULT = 512
+PROMPT_CFG_SCALE_DEFAULT = tk.DoubleVar()
+PROMPT_CFG_SCALE_DEFAULT.set(7.5)
+PROMPT_SIZE_HEIGHT_DEFAULT = tk.IntVar()
+PROMPT_SIZE_HEIGHT_DEFAULT.set(512)
+PROMPT_SIZE_WIDTH_DEFAULT = tk.IntVar()
+PROMPT_SIZE_WIDTH_DEFAULT.set(512)
 PROMPT_ID_DEFAULT = None
-PROMPT_N_ITERATIONS_DEFAULT = 1
-PROMPT_SEED_DEFAULT = -1
-PROMPT_BATCH_SIZE_DEFAULT = 1
+PROMPT_N_ITERATIONS_DEFAULT = tk.IntVar()
+PROMPT_N_ITERATIONS_DEFAULT.set(1)
+PROMPT_SEED_DEFAULT = tk.IntVar()
+PROMPT_SEED_DEFAULT.set(-1)
+PROMPT_BATCH_SIZE_DEFAULT = tk.IntVar()
+PROMPT_BATCH_SIZE_DEFAULT.set(1)
 PROMPT_CHECKPOINT_DEFAULT = 'dreamshaper_8.safetensors [879db523c3]'
 PROMPT_CUSTOM_PARAMS_DEFAULT ='eJzNU0tv1DAQTtTN7nYfLV0Q78cee6GCnrhVdBGViJQDEsfK8iZmxyKxLcfZrZCQOMbIR3OAX8eVXwGThwCpfwAnGWsm45lvvhl/Hnz9she069Ifx4F1gb84+/mtWd/f/MJlWxkHzfPJH7sRL0kqmPG1GzFB1znLvHXDQmZVzrwbCClwi1BnOapJqw53jG/A+Dh0ES/ohvnETTUr+UdGGk/vDldaqiUV2fJta/ZunMsd2WpaYPi50jJlZSk1wVO+heSmBlABmWeEXjete9PBpuIZFSkjpaEaIQRu9sfERNZgmit+xXKimH7PUoP5ZqkURsu8Bzc+p3njn3lwtFuTAkRbwElcqQriLr9kETqQyXAgs/lwa8OyrplpGMGYzLMlJQhbwtaLZtw5GOFi42yEeExFYcf0+6qF3qYckL1RA7W1OTQper9BC6iaxM45dx3ahIl1Rrmn7wtsI+wV4NAwtR3xAY9a2A/TiESQLT64zD3MJBSxocdtuNbjuKA1jgsZsWbv3DBdy2cKcvFO7VcD+BBzU8hEfwGEJ4gt/yv4KSWBc+8/DULbgod1Rhu8nz0xcnUogr7yYr5Pu11AXTOBJ1jzEO49DWKHH67cXZj+6q1NYNVu9evfQWp6kvJkysdWMlS274trkBqSwKiuOG5qgbPcBgEF6i7a+srcUgNkn6Nz5lJ78BBUFmzA=='
 
@@ -109,6 +120,8 @@ prompt_batch_size_label = None
 prompt_checkpoint_label = None
 prompt_custom_params_label = None
 sampler_dropdown = None
+
+cfg_spinbox = None
 
 samplers_object = (
     'DPM++ 2M Karras',
@@ -380,9 +393,6 @@ def sort_image(output_directory):
     else:
         print("No parameters found in image metadata")
 
-    # Load the data from the JSON file
-    with open(file_path_default_task, 'r') as file:
-        data = json.load(file)
 
     if upscale_bool == True:
         for function_index in range(5):
@@ -437,100 +447,131 @@ def sort_image(output_directory):
     update_image_count()
     
 def process_parameters(pageExists, prompt_list, prompt_data, function_index, from_prompt_window):
-
-    print(f'function_index: {function_index}')
-    print(f'prompt_data: {prompt_data}')
-    print(f'prmpt_list: {prompt_list}')
     prompt, negative_prompt, steps, sampler, cfg_scale, size, model_hash, model, lora_hashes, width, height, denoising_strength, task_id = None, None, None, None, None, None, None, None, None, None, None, None, None
-    with open(prompt_list_file_path, 'w') as file:
-        for item in prompt_data:  
-            print(f"item: {item}")
-            if 'parameters' in item:
-                parameters = item['parameters'].split(', ')
 
-                # Initialize an empty dictionary to store parameter variables
-                parameter_vars = {}
-                # Loop through the parameters
-                for param in parameters:
-                    key_value = param.split(': ')
-                    
-                    # Handling cases where parameter is a single value or a key-value pair
-                    if len(key_value) == 2:
-                        key, value = key_value
-                        parameter_vars[key.strip()] = value.strip()
+
+    if from_prompt_window == False:
+        with open(prompt_list_file_path, 'w') as file:
+            for item in prompt_data:  
+                print(f"item: {item}")
+                if 'parameters' in item:
+                    parameters = item['parameters'].split(', ')
+
+                    # Initialize an empty dictionary to store parameter variables
+                    parameter_vars = {}
+                    # Loop through the parameters
+                    for param in parameters:
+                        key_value = param.split(': ')
+                        
+                        # Handling cases where parameter is a single value or a key-value pair
+                        if len(key_value) == 2:
+                            key, value = key_value
+                            parameter_vars[key.strip()] = value.strip()
+                        else:
+                            parameter_vars['param_' + str(index)] = param.strip()
+
+            split_params = first_image_info['parameters'].split('\n')
+            for index, part in enumerate(split_params):
+                if index == 0:
+                    prompt = part
+                if index == 1:
+                    negative_prompt = part.lstrip("Negative prompt: ")
+                if index == 2:
+                    key_value_pairs = part.split(', ')
+                    for pair in key_value_pairs:
+                        key, value = pair.split(': ', 1)
+                        if 'Prompt' in key:
+                            prompt = value
+                        if 'Steps' in key:
+                            steps = int(value)
+                        if 'Sampler' in key:
+                            sampler = value
+                        if 'CFG scale' in key:
+                            cfg_scale = float(value)
+                        if 'Seed' in key:
+                            seed = int(value)
+                        if 'Size' in key:
+                            size = value
+                            sizeArr = size.split('x')
+                            print(f"sizeArr: {sizeArr}")
+                            width = int(sizeArr[0])
+                            height = int(sizeArr[1])
+                        if 'Model hash' in key:
+                            model_hash = value
+                        if 'Model' in key:
+                            model = value
+                        if 'Lora Hashes' in key:
+                            lora_hashes = value
+                        if 'enable_hr' in key and upscale_bool == False:
+                            data[0]['params']['args']['enable_hr'] = False
+
+                    if function_index == 0:
+                        denoising_strength = 0.28
+                    elif function_index == 1:
+                        denoising_strength = 0.38
+                    elif function_index == 2:
+                        denoising_strength = 0.55
+                    elif function_index == 3:
+                        denoising_strength = 0.70
+                    elif function_index == 4:
+                        denoising_strength = 0.85
+                    data[0]['params']['args']['seed'] = seed
+                    data[0]['params']['args']['prompt'] = prompt
+                    data[0]['params']['args']['negative_prompt'] = negative_prompt
+                    data[0]['params']['args']['steps'] = steps
+                    data[0]['params']['args']['sampler_name'] = sampler
+                    data[0]['params']['args']['cfg_scale'] = cfg_scale
+                    data[0]['params']['args']['height'] = height
+                    data[0]['params']['args']['width'] = width
+                    data[0]['params']['args']['denoising_strength'] = denoising_strength
+                    if not face_model_params:
+                        raise Exception("No face model params")
+                    data[0]['script_params'] = face_model_params
+
+                    characters = string.ascii_lowercase + string.digits  # Define the character set
+                    task_id = ''.join(random.choice(characters) for _ in range(15))
+                    data[0]['id'] = f'task({task_id})'
+                    data[0]['params']['args']['id_task'] = f'task({task_id})'
+
+                    if pageExists == True:
+                        print(f'prompt_list: {prompt_list}')
+                        prompt_list.extend(data)
+                        json.dump(prompt_list, file)
                     else:
-                        parameter_vars['param_' + str(index)] = param.strip()
+                        print(f'data:{data}')
+                        json.dump(data, file)
+    else:
+        with open(prompt_list_file_path, 'w') as file:
+            data[0]['params']['args']['enable_hr'] = False
+            data[0]['params']['args']['prompt'] = prompt_positive_text_box.get("1.0", "end-1c")
+            data[0]['params']['args']['negative_prompt'] = prompt_negative_text_box.get("1.0", "end-1c")
+            data[0]['params']['args']['steps'] = int(prompt_steps_text_box.get())
+            data[0]['params']['args']['sampler_name'] = sampler_dropdown.get()
+            data[0]['params']['args']['cfg_scale'] = float(cfg_spinbox.get())
+            data[0]['params']['args']['height'] = int(prompt_size_height_box.get())
+            data[0]['params']['args']['width'] = int(prompt_size_width_box.get())
+            data[0]['params']['args']['n_iter'] = int(prompt_n_iterations.get())
+            data[0]['params']['args']['seed'] = int(prompt_seed.get())
+            data[0]['params']['args']['batch_size'] = int(prompt_batch_size.get())
+            data[0]['params']['checkpoint'] = prompt_checkpoint.get()
+            data[0]['script_params'] = prompt_custom_params.get("1.0", "end-1c")
 
-        split_params = first_image_info['parameters'].split('\n')
-        for index, part in enumerate(split_params):
-            if index == 0:
-                prompt = part
-            if index == 1:
-                negative_prompt = part.lstrip("Negative prompt: ")
-            if index == 2:
-                key_value_pairs = part.split(', ')
-                for pair in key_value_pairs:
-                    key, value = pair.split(': ', 1)
-                    if 'Prompt' in key:
-                        prompt = value
-                    if 'Steps' in key:
-                        steps = int(value)
-                    if 'Sampler' in key:
-                        sampler = value
-                    if 'CFG scale' in key:
-                        cfg_scale = float(value)
-                    if 'Seed' in key:
-                        seed = int(value)
-                    if 'Size' in key:
-                        size = value
-                        sizeArr = size.split('x')
-                        print(f"sizeArr: {sizeArr}")
-                        width = int(sizeArr[0])
-                        height = int(sizeArr[1])
-                    if 'Model hash' in key:
-                        model_hash = value
-                    if 'Model' in key:
-                        model = value
-                    if 'Lora Hashes' in key:
-                        lora_hashes = value
-                    if 'enable_hr' in key and upscale_bool == False:
-                        data[0]['params']['args']['enable_hr'] = False
+            
+            characters = string.ascii_lowercase + string.digits  # Define the character set
+            task_id = ''.join(random.choice(characters) for _ in range(15))
+            data[0]['id'] = f'task({task_id})'
+            data[0]['params']['args']['id_task'] = f'task({task_id})'
 
-                if function_index == 0:
-                    denoising_strength = 0.28
-                elif function_index == 1:
-                    denoising_strength = 0.38
-                elif function_index == 2:
-                    denoising_strength = 0.55
-                elif function_index == 3:
-                    denoising_strength = 0.70
-                elif function_index == 4:
-                    denoising_strength = 0.85
-                data[0]['params']['args']['seed'] = seed
-                data[0]['params']['args']['prompt'] = prompt
-                data[0]['params']['args']['negative_prompt'] = negative_prompt
-                data[0]['params']['args']['steps'] = steps
-                data[0]['params']['args']['sampler_name'] = sampler
-                data[0]['params']['args']['cfg_scale'] = cfg_scale
-                data[0]['params']['args']['height'] = height
-                data[0]['params']['args']['width'] = width
-                data[0]['params']['args']['denoising_strength'] = denoising_strength
-                if not face_model_params:
-                    raise Exception("No face model params")
-                data[0]['script_params'] = face_model_params
+            print(f'data:{data}')
 
-                characters = string.ascii_lowercase + string.digits  # Define the character set
-                task_id = ''.join(random.choice(characters) for _ in range(15))
-                data[0]['id'] = f'task({task_id})'
-                data[0]['params']['args']['id_task'] = f'task({task_id})'
+            if pageExists == True:
+                print(f'prompt_list: {prompt_list}')
+                prompt_list.extend(data)
+                json.dump(prompt_list, file)
+            else:
+                print(f'data:{data}')
+                json.dump(data, file)
 
-                if pageExists == True:
-                    print(f'prompt_list: {prompt_list}')
-                    prompt_list.extend(data)
-                    json.dump(prompt_list, file)
-                else:
-                    print(f'data:{data}')
-                    json.dump(data, file)
 
 def update_button_positions(event=None):
     # Get the new window height
@@ -609,8 +650,9 @@ def load_history():
 
 
 def load_prompt_window():
-    global prompt_list, page_name, prompt_positive_text_box, prompt_negative_text_box, prompt_steps_text_box, prompt_sampler_text_box, prompt_size_height_box, prompt_size_width_box, prompt_id, prompt_n_iterations, prompt_seed, prompt_batch_size, prompt_checkpoint, prompt_steps_text_box_label, prompt_size_height_box_label, prompt_size_width_box_label, prompt_n_iterations_label, prompt_seed_label, prompt_batch_size_label, prompt_checkpoint_label, sampler_dropdown
+    global prompt_list, page_name, prompt_positive_text_box, prompt_negative_text_box, prompt_steps_text_box, prompt_sampler_text_box, prompt_size_height_box, prompt_size_width_box, prompt_id, prompt_n_iterations, prompt_seed, prompt_batch_size, prompt_checkpoint, prompt_steps_text_box_label, prompt_size_height_box_label, prompt_size_width_box_label, prompt_n_iterations_label, prompt_seed_label, prompt_batch_size_label, prompt_checkpoint_label, sampler_dropdown, cfg_spinbox, prompt_custom_params
 
+    prompt_params = None
     upscale_bool = False
 
     # Hide the current buttons
@@ -669,6 +711,7 @@ def load_prompt_window():
     prompt_size_height_box_label = tk.Label(root, text="Height", bg="black", fg="white")
     prompt_size_height_box_label.grid(row=8, column=0, sticky='nw', padx=15, pady=(5,5))
 
+    
     prompt_size_height_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SIZE_HEIGHT_DEFAULT)
     prompt_size_height_box.grid(row=9, column=0, sticky='nw', padx=15, pady=(2,20))
 
@@ -692,13 +735,13 @@ def load_prompt_window():
     
     cfg_spinbox_label = tk.Label(root, text="CFG Scale", bg="black", fg="white")
     cfg_spinbox_label.grid(row=12, column=0, sticky='nw', padx=15, pady=(5,5))
-    cfg_spinbox = tk.Spinbox(root, from_=0, to=100, textvariable=PROMPT_CFG_SCALE_DEFAULT)
+    cfg_spinbox = tk.Spinbox(root, from_=0, to=100, textvariable=PROMPT_CFG_SCALE_DEFAULT, increment=0.1)
     cfg_spinbox.grid(row=13, column=0, sticky='nw', padx=15, pady=(2,20))
 
     #seed
     prompt_seed_label = tk.Label(root, text="Seed", bg="black", fg="white")
     prompt_seed_label.grid(row=12, column=1, sticky='nw', padx=15, pady=(5,5))
-    prompt_seed = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SEED_DEFAULT)
+    prompt_seed = tk.Spinbox(root, from_=-1.5, to=1000, textvariable=PROMPT_SEED_DEFAULT)
     prompt_seed.grid(row=13, column=1, sticky='nw', padx=15, pady=(2,20))
 
     #propmt params
@@ -709,26 +752,16 @@ def load_prompt_window():
     prompt_custom_params.insert("1.0", "eJzNU0tv1DAQTtTN7nYfLV0Q78cee6GCnrhVdBGViJQDEsfK8iZmxyKxLcfZrZCQOMbIR3OAX8eVXwGThwCpfwAnGWsm45lvvhl/Hnz9she069Ifx4F1gb84+/mtWd/f/MJlWxkHzfPJH7sRL0kqmPG1GzFB1znLvHXDQmZVzrwbCClwi1BnOapJqw53jG/A+Dh0ES/ohvnETTUr+UdGGk/vDldaqiUV2fJta/ZunMsd2WpaYPi50jJlZSk1wVO+heSmBlABmWeEXjete9PBpuIZFSkjpaEaIQRu9sfERNZgmit+xXKimH7PUoP5ZqkURsu8Bzc+p3njn3l3lwtFuTAkRbwElcqQriLr9kETqQyXAgs/lwa8OyrplpGMGYzLMlJQhbwtaLZtw5GOFi42yEeExFYcf0+6qF3qYckL1RA7W1OTQper9BC6iaxM45dx3ahIl1Rrmn7wtsI+wV4NAwtR3xAY9a2A/TiESQLT64zD3MJBSxocdtuNbjuKA1jgsZsWbv3DBdy2cKcvFO7VcD+BBzU8hEfwGEJ4gt/yv4KSWBc+8/DULbgod1Rhu8nz0xcnUogr7yYr5Pu11AXTOBJ1jzEO49DWKHH67cXZj+6q1NYNVu9evfQWp6kvJkysdWMlS274trkBqSwKiuOG5qgbPcBgEF6i7a+srcUgNkn6Nz5lJ78BBUFmzA==")
 
     #Add to Queue button    
-    prompt_add_to_queue_button = tk.Button(root, text="Add to Queue", command=add_to_queue)
+    prompt_add_to_queue_button = tk.Button(root, text="Add to Queue", command=lambda:run_process_parameters(pageExists, prompt_list, data))
     prompt_add_to_queue_button.grid(row=19, column=0, sticky='nw', padx=15, pady=(5,5))
+    
 
-    prompt_params['positive_prompt'] = prompt_positive_text_box.get("1.0", "end-1c")
-    prompt_params['negative_prompt'] = prompt_negative_text_box.get("1.0", "end-1c")
-    prompt_params['sampler'] = sampler_dropdown.get()
-    prompt_params['steps'] = prompt_steps_text_box.get()
-    prompt_params['height'] = prompt_size_height_box.get()
-    prompt_params['width'] = prompt_size_width_box.get()
-    prompt_params['n_iterations'] = prompt_n_iterations.get()
-    prompt_params['batch_size'] = prompt_batch_size.get()
-    prompt_params['cfg_scale'] = cfg_spinbox.get()
-    prompt_params['seed'] = prompt_seed.get()
-    prompt_params['checkpoint'] = prompt_checkpoint.get()
-    prompt_params['custom_params'] = prompt_custom_params.get("1.0", "end-1c")
-
-    process_parameters(page_exists, prompt_list, prompt_params, 0, True)
-
-def add_to_queue():
-    print("Add to Queue")
+def run_process_parameters(pageExists, prompt_list, data):
+    if os.path.isfile(prompt_list_file_path):
+        with open(prompt_list_file_path, 'r') as file:
+            prompt_list = json.load(file)
+            pageExists = True
+    process_parameters(pageExists, prompt_list, data, 0, True)    
 
 def change_dropdown(*args):
     print(sampler_dropdown.get())
