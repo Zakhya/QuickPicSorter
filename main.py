@@ -1,20 +1,14 @@
 
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk
-from PIL import Image, ImageDraw
+import random
 import os
-from PIL import Image, ImageTk
 import tkinter.filedialog
 import shutil
 import tempfile
 import json
-import requests
-import json
-import io
-import base64
 import string
-import random
+from PIL import Image, ImageTk
 
 # Create a temporary directory
 temp_dir = tempfile.mkdtemp()
@@ -31,11 +25,11 @@ spacing = (window_width - 4 * button_width) / 5
 
 directory = ""
 
-
 # Path to the JSON file
 file_path_default_task = 'defaultTask.json'
 
 data = None
+page_name = "main"
 
 
 prompt_list_file_path = 'promptList.json'
@@ -60,18 +54,106 @@ third_image_path = None
 third_image = None
 third_photo = None
 
+undo_button = None
+deleteButton = None
+setMainDir = None
+button1 = None
+setButton1 = None
+button2 = None
+setButton2 = None
+button3 = None
+button4 = None
+button5 = None
+button6 = None
+face_model_dropdown = None
+
+prompt_positive_text_box = ''
+prompt_negative_text_box = ''
+prompt_steps_text_box = 25
+prompt_sampler_text_box = 'DPM++ 2M SDE Karras'
+prompt_cfg_scale_text_box = 7
+prompt_size_height_box = 512
+prompt_size_width_box = 512
+prompt_id = None
+prompt_n_iterations = 1
+prompt_seed = -1
+prompt_batch_size = 1
+prompt_checkpoint = 'dreamshaper_8.safetensors [879db523c3]'
+prompt_custom_params = None
+
+PROMPT_POSITIVE_DEFAULT = ''
+PROMPT_NEGATIVE_DEFAULT = ''
+PROMPT_STEPS_DEFAULT = 25
+PROMPT_SAMPLER_DEFAULT = 'DPM++ 2M SDE Karras'
+PROMPT_CFG_SCALE_DEFAULT = 7
+PROMPT_SIZE_HEIGHT_DEFAULT = 512
+PROMPT_SIZE_WIDTH_DEFAULT = 512
+PROMPT_ID_DEFAULT = None
+PROMPT_N_ITERATIONS_DEFAULT = 1
+PROMPT_SEED_DEFAULT = -1
+PROMPT_BATCH_SIZE_DEFAULT = 1
+PROMPT_CHECKPOINT_DEFAULT = 'dreamshaper_8.safetensors [879db523c3]'
+PROMPT_CUSTOM_PARAMS_DEFAULT ='eJzNU0tv1DAQTtTN7nYfLV0Q78cee6GCnrhVdBGViJQDEsfK8iZmxyKxLcfZrZCQOMbIR3OAX8eVXwGThwCpfwAnGWsm45lvvhl/Hnz9she069Ifx4F1gb84+/mtWd/f/MJlWxkHzfPJH7sRL0kqmPG1GzFB1znLvHXDQmZVzrwbCClwi1BnOapJqw53jG/A+Dh0ES/ohvnETTUr+UdGGk/vDldaqiUV2fJta/ZunMsd2WpaYPi50jJlZSk1wVO+heSmBlABmWeEXjete9PBpuIZFSkjpaEaIQRu9sfERNZgmit+xXKimH7PUoP5ZqkURsu8Bzc+p3njn3lwtFuTAkRbwElcqQriLr9kETqQyXAgs/lwa8OyrplpGMGYzLMlJQhbwtaLZtw5GOFi42yEeExFYcf0+6qF3qYckL1RA7W1OTQper9BC6iaxM45dx3ahIl1Rrmn7wtsI+wV4NAwtR3xAY9a2A/TiESQLT64zD3MJBSxocdtuNbjuKA1jgsZsWbv3DBdy2cKcvFO7VcD+BBzU8hEfwGEJ4gt/yv4KSWBc+8/DULbgod1Rhu8nz0xcnUogr7yYr5Pu11AXTOBJ1jzEO49DWKHH67cXZj+6q1NYNVu9evfQWp6kvJkysdWMlS274trkBqSwKiuOG5qgbPcBgEF6i7a+srcUgNkn6Nz5lJ78BBUFmzA=='
+
+prompt_positive_text_box_label = None
+prompt_negative_text_box_label = None
+prompt_steps_text_box_label = None
+prompt_sampler_text_box_label = None
+prompt_cfg_scale_text_box_label = None
+prompt_size_height_box_label = None
+prompt_size_width_box_label = None
+prompt_id_label = None
+prompt_n_iterations_label = None
+prompt_seed_label = None
+prompt_batch_size_label = None
+prompt_checkpoint_label = None
+prompt_custom_params_label = None
+sampler_dropdown = None
+
+samplers_object = (
+    'DPM++ 2M Karras',
+    'DPM++ SDE Karras',
+    'DPM++ 2M SDE Exponential',
+    'DPM++ 2M SDE Karras',
+    'Euler a',
+    'Euler',
+    'LMS',
+    'Heun',
+    'DPM2',
+    'DPM2 A',
+    'DPM++ 2S a',
+    'DPM++ 2M',
+    'DPM SDE',
+    'DPM 2M SDE',
+    'DPM++ 2M SDE Heun',
+    'DPM++ 2M SDE Heun Karras',
+    'DPM++ 2M SDE Heun Exponential',
+    'DPM++ 3M SDE',
+    'DPM++ 3M SDE Karras',
+    'DPM++ 3M SDE Exponential',
+    'DPM fast',
+    'DPM adaptive',
+    'LMS Karras',
+    'DPM2 Karras',
+    'DPM2 a Karras',
+    'DPM++ 2S a Karras',
+    'restart',
+    'DDIM',
+    'PLMS',
+    'UniPC'
+)
+
 # display_img1 = None
 # display_img2 = None
 # display_img3 = None
 
-deleted_images = [] 
+deleted_images = []
 image_files = []
 actions = []
 history = {}
 prompt_list = None
 
 upscale_bool = False
-
 
 image_label = tk.Label(root)
 image_label.place(x=window_width/2 - 600, y=0, anchor="n")
@@ -82,9 +164,7 @@ second_image_label.place(x=window_width/2, y=0, anchor="n")
 third_image_label = tk.Label(root)
 third_image_label.place(x=window_width/2 + 600, y=0, anchor="n")
 
-
-
-def delete_image(color):
+def delete_image():
     global first_image_file, first_image_path, first_image, first_photo
     global second_image_file, second_image_path, second_image, second_photo
     global third_image_file, third_image_path, third_image, third_photo
@@ -93,11 +173,10 @@ def delete_image(color):
     # Move the first image to the temporary directory
     if os.path.exists(first_image_path):
         first_image.close()
-        
         shutil.move(first_image_path, os.path.join(temp_dir, first_image_file))
 
         # Store the action in the actions list
-        actions.append(('delete', first_image_file, image_files.index(first_image_file), directory)) 
+        actions.append(('delete', first_image_file, image_files.index(first_image_file), directory))
 
         # Remove the deleted image from the list
         if first_image_file in image_files:
@@ -241,39 +320,15 @@ def undo():
         # Load the next image
         load_next_image()
 
-image_count_label = tk.Label(root, text="")
-image_count_label.pack()
+image_count_label = None
+input_directory_label_text = None
+input_directory_label = None
+output_directory_label_text1 = None
+output_directory_label1 = None
+output_directory_label_text2 = None
+output_directory_label2 = None
+output_directory_label_text3 = None
 
-# Create StringVars for the labels
-input_directory_label_text = tk.StringVar()
-input_directory_label_text.set("None")
-
-# Create the labels
-input_directory_label = tk.Label(root, textvariable=input_directory_label_text)
-input_directory_label.place(x=spacing, y=1000)
-
-
-# Create StringVars for the labels
-output_directory_label_text1 = tk.StringVar()
-output_directory_label_text1.set("None")
-
-# Create the labels
-output_directory_label1 = tk.Label(root, textvariable=output_directory_label_text1)
-output_directory_label1.place(x=2*spacing + button_width, y=1050)
-
-
-# Create StringVars for the labels
-output_directory_label_text2 = tk.StringVar()
-output_directory_label_text2.set("None")
-
-# Create the labels
-output_directory_label2 = tk.Label(root, textvariable=output_directory_label_text2)
-output_directory_label2.place(x=3*spacing + 2*button_width, y=1050)
-
-
-# Create StringVars for the labels
-output_directory_label_text3 = tk.StringVar()
-output_directory_label_text3.set("None")
 
 
 # Create a variable for the directory
@@ -335,11 +390,10 @@ def sort_image(output_directory):
                 with open(prompt_list_file_path, 'r') as file:
                     prompt_list = json.load(file)
                     pageExists = True
-            process_parameters(pageExists, prompt_list, data, function_index)
-       
-    
+            process_parameters(pageExists, prompt_list, data, function_index, False)
+
     # Save the current state before performing the action
-    actions.append(('sort', first_image_file, image_files.index(first_image_file), output_directory))
+    actions.append(('sort', first_image_file, image_files.index(first_image_file),output_directory))
     if directory and first_image_file and first_image_path and os.path.exists(first_image_path):
         first_image.close()
         shutil.move(first_image_path, output_directory)
@@ -382,13 +436,14 @@ def sort_image(output_directory):
             third_image_label.image = None
     update_image_count()
     
-def process_parameters(pageExists, prompt_list, data, function_index):
-    
+def process_parameters(pageExists, prompt_list, prompt_data, function_index, from_prompt_window):
+
     print(f'function_index: {function_index}')
+    print(f'prompt_data: {prompt_data}')
+    print(f'prmpt_list: {prompt_list}')
     prompt, negative_prompt, steps, sampler, cfg_scale, size, model_hash, model, lora_hashes, width, height, denoising_strength, task_id = None, None, None, None, None, None, None, None, None, None, None, None, None
     with open(prompt_list_file_path, 'w') as file:
-
-        for item in data:  
+        for item in prompt_data:  
             print(f"item: {item}")
             if 'parameters' in item:
                 parameters = item['parameters'].split(', ')
@@ -438,7 +493,9 @@ def process_parameters(pageExists, prompt_list, data, function_index):
                         model = value
                     if 'Lora Hashes' in key:
                         lora_hashes = value
-                
+                    if 'enable_hr' in key and upscale_bool == False:
+                        data[0]['params']['args']['enable_hr'] = False
+
                 if function_index == 0:
                     denoising_strength = 0.28
                 elif function_index == 1:
@@ -463,10 +520,10 @@ def process_parameters(pageExists, prompt_list, data, function_index):
                 data[0]['script_params'] = face_model_params
 
                 characters = string.ascii_lowercase + string.digits  # Define the character set
-
                 task_id = ''.join(random.choice(characters) for _ in range(15))
                 data[0]['id'] = f'task({task_id})'
                 data[0]['params']['args']['id_task'] = f'task({task_id})'
+
                 if pageExists == True:
                     print(f'prompt_list: {prompt_list}')
                     prompt_list.extend(data)
@@ -492,6 +549,7 @@ def update_button_positions(event=None):
     face_model_dropdown.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
     button4.place(x=4*spacing + 3*button_width, y=window_height - (button_height + button_spacing * 2.5), width=button_width, anchor="s")
     button5.place(x=4*spacing + 3*button_width, y=window_height - (button_height + button_spacing * 3.5), width=button_width, anchor="s")
+    button6.place(x=4.5*spacing + 3.5*button_width, y=window_height - (button_height + button_spacing), width=button_width, anchor="s")
 
      # Place the labels
     input_directory_label.place(x=spacing - 50, y=window_height - (3 * button_height + button_spacing + 20))
@@ -527,19 +585,19 @@ def load_history():
     with open('history.json', 'r') as file:
         history = json.load(file)
         print(f"history: {history}")
-        if 'input_dir' in history and history['input_dir'] != None:
+        if 'input_dir' in history and history['input_dir'] is not None:
             directory = history['input_dir']
             input_directory_label_text.set(f"{os.path.basename(directory)}")
-        if 'output_dir' in history and history['output_dir'] != None:
+        if 'output_dir' in history and history['output_dir'] is not None:
             directory1 = history['output_dir']
             output_directory_label_text1.set(f"{os.path.basename(directory1)}")
-        if 'output_dir2' in history and history['output_dir2'] != None:
+        if 'output_dir2' in history and history['output_dir2'] is not None:
             directory2 = history['output_dir2']
             output_directory_label_text2.set(f"{os.path.basename(directory2)}")
-        if 'face_model' in history and history['face_model'] != None:
+        if 'face_model' in history and history['face_model'] is not None:
             face_model_params = history['face_model_params']
             face_model_dropdown.set(f"{history['face_model']}")
-        if 'upscale_bool' in history and history['upscale_bool'] != None:
+        if 'upscale_bool' in history and history['upscale_bool'] is not None:
             upscale_bool = history['upscale_bool']
             if upscale_bool == True:
                 button3.config(bg="green", fg="white")
@@ -549,8 +607,133 @@ def load_history():
                 button3.config(activebackground='green', activeforeground='white')
         choose_input_directory(True)
 
-# Delay the placement of the buttons until after the window is displayed
-root.after(100, update_button_positions)
+
+def load_prompt_window():
+    global prompt_list, page_name, prompt_positive_text_box, prompt_negative_text_box, prompt_steps_text_box, prompt_sampler_text_box, prompt_size_height_box, prompt_size_width_box, prompt_id, prompt_n_iterations, prompt_seed, prompt_batch_size, prompt_checkpoint, prompt_steps_text_box_label, prompt_size_height_box_label, prompt_size_width_box_label, prompt_n_iterations_label, prompt_seed_label, prompt_batch_size_label, prompt_checkpoint_label, sampler_dropdown
+
+    upscale_bool = False
+
+    # Hide the current buttons
+    page_name = "queueBuilder"
+    image_count_label.destroy()
+    input_directory_label.destroy()
+    output_directory_label1.destroy()
+    output_directory_label2.destroy()
+    undo_button.destroy()
+    deleteButton.destroy()
+    setMainDir.destroy()
+    button1.destroy()
+    setButton1.destroy()
+    button2.destroy()
+    setButton2.destroy()
+    button3.destroy()
+    button4.destroy()
+    button5.destroy()
+    button6.destroy()
+    face_model_dropdown.destroy()
+
+    #checkpoint
+    prompt_checkpoint_label = tk.Label(root, text="Checkpoint", bg="black", fg="white")
+    prompt_checkpoint_label.grid(row=0, column=0, sticky='nw', padx=15, pady=(5,5))
+    prompt_checkpoint = ttk.Combobox(root)
+    prompt_checkpoint['values']= ('dreamshaper_8.safetensors [879db523c3]', 'dreamshaper_8.safetensors [879db523c3]')
+    prompt_checkpoint.set('dreamshaper_8.safetensors [879db523c3]') # set the default option
+    prompt_checkpoint.grid(row=1, column=0, sticky='nw', padx=15, pady=(2,20))
+    
+    #prompt
+    prompt_positive_text_box = tk.Text(root, width=50, height=5)
+    prompt_positive_text_box.insert("1.0", "Positive Prompt")
+    prompt_positive_text_box.grid(row=2, column=0, sticky='nw', padx=15, pady=(2, 20), columnspan=3, rowspan=2)
+
+    prompt_negative_text_box = tk.Text(root, width=50, height=5)
+    prompt_negative_text_box.insert("1.0", "Negative Prompt")
+    prompt_negative_text_box.grid(row=4, column=0, sticky='nw', padx=15, pady=(2,20), columnspan=3, rowspan=2)
+
+    # create dropdown menu
+    prompt_sampler_text_box = tk.Label(root, text="Sampler", bg="black", fg="white")
+    prompt_sampler_text_box.grid(row=6, column=0, sticky='nw', padx=15, pady=(2,2))
+    
+    sampler_dropdown = ttk.Combobox(root)
+    sampler_dropdown['values']= samplers_object
+    sampler_dropdown.set(PROMPT_SAMPLER_DEFAULT) # set the default option
+    sampler_dropdown.grid(row=7, column=0, sticky='nw', padx=15, pady=(2,20))
+
+
+    #steps
+    prompt_steps_text_box_label = tk.Label(root, text="Steps", bg="black", fg="white")
+    prompt_steps_text_box_label.grid(row=6, column=1, sticky='nw', padx=15, pady=(5,5))
+    prompt_steps_text_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_STEPS_DEFAULT)
+    prompt_steps_text_box.grid(row=7, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    #height and width
+    prompt_size_height_box_label = tk.Label(root, text="Height", bg="black", fg="white")
+    prompt_size_height_box_label.grid(row=8, column=0, sticky='nw', padx=15, pady=(5,5))
+
+    prompt_size_height_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SIZE_HEIGHT_DEFAULT)
+    prompt_size_height_box.grid(row=9, column=0, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_size_width_box_label = tk.Label(root, text="Width", bg="black", fg="white")
+    prompt_size_width_box_label.grid(row=8, column=1, sticky='nw', padx=15, pady=(5,5))
+
+    prompt_size_width_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SIZE_WIDTH_DEFAULT)
+    prompt_size_width_box.grid(row=9, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    #batch count and iterations
+
+    prompt_n_iterations_label = tk.Label(root, text="Iterations", bg="black", fg="white")
+    prompt_n_iterations_label.grid(row=10, column=0, sticky='nw', padx=15, pady=(5,5))
+    prompt_n_iterations = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_N_ITERATIONS_DEFAULT)
+    prompt_n_iterations.grid(row=11, column=0, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_batch_size_label = tk.Label(root, text="Batch Size", bg="black", fg="white")
+    prompt_batch_size_label.grid(row=10, column=1, sticky='nw', padx=15, pady=(5,5))
+    prompt_batch_size = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_BATCH_SIZE_DEFAULT)
+    prompt_batch_size.grid(row=11, column=1, sticky='nw', padx=15, pady=(2,20))
+    
+    cfg_spinbox_label = tk.Label(root, text="CFG Scale", bg="black", fg="white")
+    cfg_spinbox_label.grid(row=12, column=0, sticky='nw', padx=15, pady=(5,5))
+    cfg_spinbox = tk.Spinbox(root, from_=0, to=100, textvariable=PROMPT_CFG_SCALE_DEFAULT)
+    cfg_spinbox.grid(row=13, column=0, sticky='nw', padx=15, pady=(2,20))
+
+    #seed
+    prompt_seed_label = tk.Label(root, text="Seed", bg="black", fg="white")
+    prompt_seed_label.grid(row=12, column=1, sticky='nw', padx=15, pady=(5,5))
+    prompt_seed = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SEED_DEFAULT)
+    prompt_seed.grid(row=13, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    #propmt params
+    prompt_params_label = tk.Label(root, text="Custom Params", bg="Black", fg="white")
+    prompt_params_label.grid(row=14, column=0, sticky='nw', padx=15, pady=(5,5))
+    prompt_custom_params = tk.Text(root, width=85, height=11)
+    prompt_custom_params.grid(row=15, column=0, sticky='nw', padx=15, pady=(2,20), columnspan=4, rowspan=3)
+    prompt_custom_params.insert("1.0", "eJzNU0tv1DAQTtTN7nYfLV0Q78cee6GCnrhVdBGViJQDEsfK8iZmxyKxLcfZrZCQOMbIR3OAX8eVXwGThwCpfwAnGWsm45lvvhl/Hnz9she069Ifx4F1gb84+/mtWd/f/MJlWxkHzfPJH7sRL0kqmPG1GzFB1znLvHXDQmZVzrwbCClwi1BnOapJqw53jG/A+Dh0ES/ohvnETTUr+UdGGk/vDldaqiUV2fJta/ZunMsd2WpaYPi50jJlZSk1wVO+heSmBlABmWeEXjete9PBpuIZFSkjpaEaIQRu9sfERNZgmit+xXKimH7PUoP5ZqkURsu8Bzc+p3njn3l3lwtFuTAkRbwElcqQriLr9kETqQyXAgs/lwa8OyrplpGMGYzLMlJQhbwtaLZtw5GOFi42yEeExFYcf0+6qF3qYckL1RA7W1OTQper9BC6iaxM45dx3ahIl1Rrmn7wtsI+wV4NAwtR3xAY9a2A/TiESQLT64zD3MJBSxocdtuNbjuKA1jgsZsWbv3DBdy2cKcvFO7VcD+BBzU8hEfwGEJ4gt/yv4KSWBc+8/DULbgod1Rhu8nz0xcnUogr7yYr5Pu11AXTOBJ1jzEO49DWKHH67cXZj+6q1NYNVu9evfQWp6kvJkysdWMlS274trkBqSwKiuOG5qgbPcBgEF6i7a+srcUgNkn6Nz5lJ78BBUFmzA==")
+
+    #Add to Queue button    
+    prompt_add_to_queue_button = tk.Button(root, text="Add to Queue", command=add_to_queue)
+    prompt_add_to_queue_button.grid(row=19, column=0, sticky='nw', padx=15, pady=(5,5))
+
+    prompt_params['positive_prompt'] = prompt_positive_text_box.get("1.0", "end-1c")
+    prompt_params['negative_prompt'] = prompt_negative_text_box.get("1.0", "end-1c")
+    prompt_params['sampler'] = sampler_dropdown.get()
+    prompt_params['steps'] = prompt_steps_text_box.get()
+    prompt_params['height'] = prompt_size_height_box.get()
+    prompt_params['width'] = prompt_size_width_box.get()
+    prompt_params['n_iterations'] = prompt_n_iterations.get()
+    prompt_params['batch_size'] = prompt_batch_size.get()
+    prompt_params['cfg_scale'] = cfg_spinbox.get()
+    prompt_params['seed'] = prompt_seed.get()
+    prompt_params['checkpoint'] = prompt_checkpoint.get()
+    prompt_params['custom_params'] = prompt_custom_params.get("1.0", "end-1c")
+
+    process_parameters(page_exists, prompt_list, prompt_params, 0, True)
+
+def add_to_queue():
+    print("Add to Queue")
+
+def change_dropdown(*args):
+    print(sampler_dropdown.get())
+
+# link function to change dropdown
 
 # Assuming you have 8 buttons
 button_height = 50
@@ -558,81 +741,129 @@ button_spacing = 50
 
 window_height = root.winfo_height()
 
-# Create the "Undo" button
-undo_button = tk.Button(root, text="Undo", command=undo)
-undo_button.place(x=spacing, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
 
-# deleteButton
-deleteButton = tk.Button(root, text="Delete", command=lambda: delete_image("delete"), fg="red")
-deleteButton.place(x=spacing, y=window_height - button_height, width=button_width, anchor="s")
+def create_main_content():  
+    global undo_button, deleteButton, setMainDir, button1, setButton1, button2, setButton2, button3, button4, button5, button6, face_model_dropdown, page_name, image_count_label, input_directory_label_text, input_directory_label, output_directory_label_text1, output_directory_label1, output_directory_label_text2, output_directory_label2, output_directory_label_text3, face_model_dropdown
 
-# setMainDir
-setMainDir = tk.Button(root, text="InputDir", command=choose_input_directory)
-setMainDir.place(x=spacing, y=window_height - (2 * button_height + button_spacing), width=button_width, anchor="s")
+    page_name = "main"
 
-# button1
-button1 = tk.Button(root, text="Send", command=lambda: sort_image(directory1))
-button1.place(x=2*spacing + button_width, y=window_height - button_height, width=button_width, anchor="s")
+    image_count_label = tk.Label(root, text="")
+    image_count_label.pack()
 
-# setButton1
-setButton1 = tk.Button(root, text="outputDir1", command=choose_sort_directory1)
-setButton1.place(x=2*spacing + button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+    # Create StringVars for the labels
+    input_directory_label_text = tk.StringVar()
+    input_directory_label_text.set("None")
 
-# button2
-button2 = tk.Button(root, text="Send", command=lambda: sort_image(directory2))
-button2.place(x=3*spacing + 2*button_width, y=window_height - button_height, width=button_width, anchor="s")
-
-# setButton2
-setButton2 = tk.Button(root, text="outputDir2", command=choose_sort_directory2)
-setButton2.place(x=3*spacing + 2*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
-
-def toggle_button3(event=None):
-    global upscale_bool
-    # Check the current color of the button
-    if upscale_bool == True:
-        upscale_bool = False
-        button3.config(bg="red", fg="grey")
-        button3.config(activebackground='green', activeforeground='white')
-    else:
-        upscale_bool = True
-        button3.config(bg="green", fg="white")
-        button3.config(activebackground='red', activeforeground='grey')
-# button3
-button3 = tk.Button(root, text="Upscale", command=toggle_button3, activebackground="green", activeforeground="white")
-button3.place(x=4*spacing + 3*button_width, y=window_height - button_height , width=button_width, anchor="s")
-button3.config(bg="red", fg="grey")
- 
-button4 = tk.Button(root, text="Save", command=save_history, activebackground="green", activeforeground="white")
-button4.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, anchor="s")
-
-button5 = tk.Button(root, text="Load", command=load_history, activebackground="green", activeforeground="white")
-button5.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, anchor="s")
-
-# face_model_dropdown
-# Read the keys from the JSON file
-face_model_keys = []
-with open('face_model_params.json') as f:
-    face_model_data = json.load(f)
-face_model_keys = list(face_model_data.keys())
-# Create a StringVar to hold the selected value
-selected_key = tk.StringVar()
-
-# Create the dropdown
-face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
-
-# Populate the dropdown with the keys
-face_model_dropdown['values'] = face_model_keys
-
-# Set the first key as the initially selected value
-if face_model_keys:
-    face_model_dropdown.current(0)
-
-face_model_dropdown.bind("<<ComboboxSelected>>", set_face_model)
-set_face_model(event=None)
-# Place the dropdown in the window
-face_model_dropdown.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=800, height=50, anchor="s")
+    # Create the labels
+    input_directory_label = tk.Label(root, textvariable=input_directory_label_text)
+    input_directory_label.place(x=spacing, y=1000)
 
 
-root.bind('<Configure>', update_button_positions)
+    # Create StringVars for the labels
+    output_directory_label_text1 = tk.StringVar()
+    output_directory_label_text1.set("None")
 
+    # Create the labels
+    output_directory_label1 = tk.Label(root, textvariable=output_directory_label_text1)
+    output_directory_label1.place(x=2*spacing + button_width, y=1050)
+
+
+    # Create StringVars for the labels
+    output_directory_label_text2 = tk.StringVar()
+    output_directory_label_text2.set("None")
+
+    # Create the labels
+    output_directory_label2 = tk.Label(root, textvariable=output_directory_label_text2)
+    output_directory_label2.place(x=3*spacing + 2*button_width, y=1050)
+
+
+    # Create StringVars for the labels
+    output_directory_label_text3 = tk.StringVar()
+    output_directory_label_text3.set("None")
+
+
+    # Create the "Undo" button
+    undo_button = tk.Button(root, text="Undo", command=undo)
+    undo_button.place(x=spacing, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+
+    # deleteButton
+    deleteButton = tk.Button(root, text="Delete", command=lambda: delete_image(), fg="red")
+    deleteButton.place(x=spacing, y=window_height - button_height, width=button_width, anchor="s")
+
+    # setMainDir
+    setMainDir = tk.Button(root, text="InputDir", command=choose_input_directory)
+    setMainDir.place(x=spacing, y=window_height - (2 * button_height + button_spacing), width=button_width, anchor="s")
+
+    # button1
+    button1 = tk.Button(root, text="Send", command=lambda: sort_image(directory1))
+    button1.place(x=2*spacing + button_width, y=window_height - button_height, width=button_width, anchor="s")
+
+    # setButton1
+    setButton1 = tk.Button(root, text="outputDir1", command=choose_sort_directory1)
+    setButton1.place(x=2*spacing + button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+
+    # button2
+    button2 = tk.Button(root, text="Send", command=lambda: sort_image(directory2))
+    button2.place(x=3*spacing + 2*button_width, y=window_height - button_height, width=button_width, anchor="s")
+
+    # setButton2
+    setButton2 = tk.Button(root, text="outputDir2", command=choose_sort_directory2)
+    setButton2.place(x=3*spacing + 2*button_width, y=window_height -(button_height + button_spacing), width=button_width, anchor="s")
+
+    def toggle_button3(event=None):
+        global upscale_bool
+        # Check the current color of the button
+        if upscale_bool is True:
+            upscale_bool = False
+            button3.config(bg="red", fg="grey")
+            button3.config(activebackground='green', activeforeground='white')
+        else:
+            upscale_bool = True
+            button3.config(bg="green", fg="white")
+            button3.config(activebackground='red', activeforeground='grey')
+    # button3
+    button3 = tk.Button(root, text="Upscale", command=toggle_button3, activebackground="green", activeforeground="white")
+    button3.place(x=4*spacing + 3*button_width, y=window_height - button_height , width=button_width, anchor="s")
+    button3.config(bg="red", fg="grey")
+    
+    button4 = tk.Button(root, text="Save", command=save_history)
+    button4.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, anchor="s")
+
+    button5 = tk.Button(root, text="Load", command=load_history)
+    button5.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, anchor="s")
+
+    button6 = tk.Button(root, text="Add Prompt", command=load_prompt_window)
+    button6.place(x=4*spacing + 3*button_width, y=window_height - button_height, width=button_width, height=button_height * 2, anchor="s")
+
+    # face_model_dropdown
+    # Read the keys from the JSON file
+    face_model_keys = []
+    with open('face_model_params.json') as f:
+        face_model_data = json.load(f)
+    face_model_keys = list(face_model_data.keys())
+    # Create a StringVar to hold the selected value
+    selected_key = tk.StringVar()
+
+    # Create the dropdown
+    face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
+
+    # Populate the dropdown with the keys
+    face_model_dropdown['values'] = face_model_keys
+
+    # Set the first key as the initially selected value
+    if face_model_keys:
+        face_model_dropdown.current(0)
+
+    face_model_dropdown.bind("<<ComboboxSelected>>", set_face_model)
+    set_face_model(event=None)
+    # Place the dropdown in the window
+    face_model_dropdown.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=800, height=50, anchor="s")
+
+    # Delay the placement of the buttons until after the window is displayed
+    root.after(100, update_button_positions)
+
+if page_name == "main":
+    create_main_content()
+
+print(f"page_name: {page_name}")
 root.mainloop()
