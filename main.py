@@ -88,12 +88,12 @@ prompt_custom_params = None
 PROMPT_POSITIVE_DEFAULT = ''
 PROMPT_NEGATIVE_DEFAULT = ''
 PROMPT_STEPS_DEFAULT = tk.IntVar()
-PROMPT_STEPS_DEFAULT.set(25)
+PROMPT_STEPS_DEFAULT.set(34)
 PROMPT_SAMPLER_DEFAULT = 'DPM++ 2M SDE Karras'
 PROMPT_CFG_SCALE_DEFAULT = tk.DoubleVar()
-PROMPT_CFG_SCALE_DEFAULT.set(7.5)
+PROMPT_CFG_SCALE_DEFAULT.set(4.5)
 PROMPT_SIZE_HEIGHT_DEFAULT = tk.IntVar()
-PROMPT_SIZE_HEIGHT_DEFAULT.set(512)
+PROMPT_SIZE_HEIGHT_DEFAULT.set(1024)
 PROMPT_SIZE_WIDTH_DEFAULT = tk.IntVar()
 PROMPT_SIZE_WIDTH_DEFAULT.set(512)
 PROMPT_ID_DEFAULT = None
@@ -121,6 +121,52 @@ prompt_checkpoint_label = None
 prompt_custom_params_label = None
 sampler_dropdown = None
 
+
+prompt_positive_radio_button = tk.StringVar()
+prompt_positive_radio_front = tk.Radiobutton(root, text="front", variable=prompt_positive_radio_button, value="front")
+prompt_positive_radio_none = tk.Radiobutton(root, text="none", variable=prompt_positive_radio_button, value="none")
+prompt_positive_radio_back = tk.Radiobutton(root, text="end", variable=prompt_positive_radio_button, value="end")
+
+
+prompt_negative_radio_button = tk.StringVar()
+prompt_negative_radio_front = tk.Radiobutton(root, text="front", variable=prompt_negative_radio_button, value="front")
+prompt_negative_radio_none = tk.Radiobutton(root, text="none", variable=prompt_negative_radio_button, value="none")
+prompt_negative_radio_back = tk.Radiobutton(root, text="end", variable=prompt_negative_radio_button, value="end")
+
+prompt_checkpoint_var = tk.IntVar()
+prompt_checkpoint_checkbox = tk.Checkbutton(root, variable=prompt_checkpoint_var)
+prompt_positive_var = tk.IntVar()
+prompt_positive_checkbox = tk.Checkbutton(root, variable=prompt_positive_var)
+prompt_negative_var = tk.IntVar()
+prompt_negative_checkbox = tk.Checkbutton(root, variable=prompt_negative_var)
+prompt_steps_var = tk.IntVar()
+prompt_steps_checkbox = tk.Checkbutton(root, variable=prompt_steps_var)
+prompt_sampler_var = tk.IntVar()
+prompt_sampler_checkbox = tk.Checkbutton(root, variable=prompt_sampler_var)
+prompt_cfg_scale_var = tk.IntVar()
+prompt_cfg_scale_checkbox = tk.Checkbutton(root, variable=prompt_cfg_scale_var)
+prompt_size_height_var = tk.IntVar()
+prompt_size_height_checkbox = tk.Checkbutton(root, variable=prompt_size_height_var)
+prompt_size_width_var = tk.IntVar()
+prompt_size_width_checkbox = tk.Checkbutton(root, variable=prompt_size_width_var)
+prompt_iterations_var = tk.IntVar()
+prompt_iterations_checkbox = tk.Checkbutton(root, variable=prompt_iterations_var)
+prompt_batch_size_var = tk.IntVar()
+prompt_batch_size_checkbox = tk.Checkbutton(root, variable=prompt_batch_size_var)
+prompt_seed_var = tk.IntVar()
+prompt_seed_checkbox = tk.Checkbutton(root, variable=prompt_seed_var)
+prompt_custom_params_var = tk.IntVar()
+prompt_custom_params_checkbox = tk.Checkbutton(root, variable=prompt_custom_params_var)
+
+prompt_new_variations = {}
+labels_and_Checkbuttons = {}
+variations_checkbox_vars = []
+prompt_add_variation_text_box = tk.Text(root, width=50, height=1)
+
+variation_data = None
+if os.path.isfile('variations.json'):
+    with open('variations.json', 'r') as file:
+        variation_data = json.load(file)
 cfg_spinbox = None
 
 samplers_object = (
@@ -219,6 +265,7 @@ def delete_image():
             third_photo = ImageTk.PhotoImage(resize_image_for_display(third_image_path))
             third_image_label.config(image=third_photo)
             third_image_label.image = third_photo
+    update_image_count()
 
 def resize_image_for_display(input_image_path):
     img = Image.open(input_image_path)
@@ -448,12 +495,15 @@ def sort_image(output_directory):
     
 def process_parameters(pageExists, prompt_list, prompt_data, function_index, from_prompt_window):
     prompt, negative_prompt, steps, sampler, cfg_scale, size, model_hash, model, lora_hashes, width, height, denoising_strength, task_id = None, None, None, None, None, None, None, None, None, None, None, None, None
-
+    global variation_data
+    if os.path.isfile('variations.json'):
+        with open('variations.json', 'r') as file:
+            variation_data = json.load(file)
+            print(f"line 502 variation_data: {variation_data}")
 
     if from_prompt_window == False:
         with open(prompt_list_file_path, 'w') as file:
             for item in prompt_data:  
-                print(f"item: {item}")
                 if 'parameters' in item:
                     parameters = item['parameters'].split(', ')
 
@@ -543,18 +593,106 @@ def process_parameters(pageExists, prompt_list, prompt_data, function_index, fro
     else:
         with open(prompt_list_file_path, 'w') as file:
             data[0]['params']['args']['enable_hr'] = False
-            data[0]['params']['args']['prompt'] = prompt_positive_text_box.get("1.0", "end-1c")
-            data[0]['params']['args']['negative_prompt'] = prompt_negative_text_box.get("1.0", "end-1c")
-            data[0]['params']['args']['steps'] = int(prompt_steps_text_box.get())
-            data[0]['params']['args']['sampler_name'] = sampler_dropdown.get()
-            data[0]['params']['args']['cfg_scale'] = float(cfg_spinbox.get())
-            data[0]['params']['args']['height'] = int(prompt_size_height_box.get())
-            data[0]['params']['args']['width'] = int(prompt_size_width_box.get())
-            data[0]['params']['args']['n_iter'] = int(prompt_n_iterations.get())
-            data[0]['params']['args']['seed'] = int(prompt_seed.get())
-            data[0]['params']['args']['batch_size'] = int(prompt_batch_size.get())
-            data[0]['params']['checkpoint'] = prompt_checkpoint.get()
-            data[0]['script_params'] = prompt_custom_params.get("1.0", "end-1c")
+
+            # data[0]['params']['args']['prompt'] = prompt_positive_text_box.get('1.0', 'end-1c')
+            # data[0]['params']['args']['negative_prompt'] = prompt_negative_text_box.get('1.0', 'end-1c')
+
+            negative_text = prompt_negative_text_box.get('1.0', 'end-1c')
+            positive_text = prompt_positive_text_box.get('1.0', 'end-1c')
+
+            if function_index is not None and 'positive_front' in variation_data[function_index]:
+                # Combine positive_front with the text from prompt_positive_text_box
+                combined_positive_text = variation_data[function_index]['positive_front'] + " " + positive_text
+                data[0]['params']['args']['prompt'] = combined_positive_text
+            elif function_index is not None and 'positive_back' in variation_data[function_index]:
+                # Combine positive_back with the text from prompt_positive_text_box
+                combined_positive_text = positive_text + " " + variation_data[function_index]['positive_back']
+                data[0]['params']['args']['prompt'] = combined_positive_text
+            else:
+                data[0]['params']['args']['prompt'] = positive_text
+
+            if function_index is not None and 'negative_front' in variation_data[function_index]:
+                # Combine negative_front with the text from prompt_negative_text_box
+                combined_negative_text = variation_data[function_index]['negative_front'] + " " + negative_text
+                data[0]['params']['args']['negative_prompt'] = combined_negative_text
+            elif function_index is not None and 'negative_back' in variation_data[function_index]:
+                # Combine negative_back with the text from prompt_negative_text_box
+                combined_negative_text = negative_text + " " + variation_data[function_index]['negative_back']
+                data[0]['params']['args']['negative_prompt'] = combined_negative_text
+            else:
+                data[0]['params']['args']['negative_prompt'] = negative_text
+
+            print(f"line 594 variation_data: {variation_data}")
+            print(f"line 595 function_index: {function_index}")
+            if function_index is not None and 'steps' in variation_data[function_index]:
+                steps_value = variation_data[function_index]['steps']
+            else:
+                steps_value = int(prompt_steps_text_box.get())
+            data[0]['params']['args']['steps'] = int(steps_value)
+
+            if function_index is not None and 'sampler' in variation_data[function_index]:
+                sampler_value = variation_data[function_index]['sampler']
+            else:
+                sampler_value = sampler_dropdown.get()  
+            data[0]['params']['args']['sampler_name'] = sampler_value
+
+            if function_index is not None and 'cfg_scale' in variation_data[function_index]:
+                cfg_scale_value = variation_data[function_index]['cfg_scale']
+            else:
+                cfg_scale_value = float(cfg_spinbox.get())
+            data[0]['params']['args']['cfg_scale'] = float(cfg_scale_value)
+
+            if function_index is not None and 'height' in variation_data[function_index]:
+                height_value = variation_data[function_index]['height']
+            else:   
+                height_value = int(prompt_size_height_box.get())
+            data[0]['params']['args']['height'] = int(height_value)
+
+            if function_index is not None and 'width' in variation_data[function_index]:
+                width_value = variation_data[function_index]['width']
+            else:
+                width_value = int(prompt_size_width_box.get())
+            data[0]['params']['args']['width'] = int(width_value)
+            
+            if function_index is not None and 'n_iter' in variation_data[function_index]:
+                n_iter_value = variation_data[function_index]['n_iter']
+            else:
+                n_iter_value = int(prompt_n_iterations.get())
+            data[0]['params']['args']['n_iter'] = int(n_iter_value)
+
+            if function_index is not None and 'seed' in variation_data[function_index]:
+                seed_value = variation_data[function_index]['seed']
+            else:
+                seed_value = int(prompt_seed.get())
+            data[0]['params']['args']['seed'] = int(seed_value)
+
+            if function_index is not None and 'batch_size' in variation_data[function_index]:
+                batch_size_value = variation_data[function_index]['batch_size']
+            else:
+                batch_size_value = int(prompt_batch_size.get())
+            data[0]['params']['args']['batch_size'] = int(batch_size_value)
+
+            if function_index is not None and 'checkpoint' in variation_data[function_index]:
+                checkpoint_value = variation_data[function_index]['checkpoint']
+            else:
+                checkpoint_value = prompt_checkpoint.get()
+            data[0]['params']['checkpoint'] = checkpoint_value
+
+            if function_index is not None and 'custom_params' in variation_data[function_index]:
+                custom_params_value = variation_data[function_index]['custom_params']   
+            else:
+                custom_params_value = prompt_custom_params.get("1.0", "end-1c")
+            data[0]['script_params'] = custom_params_value
+
+            # data[0]['params']['args']['sampler_name'] = sampler_dropdown.get()
+            # data[0]['params']['args']['cfg_scale'] = float(cfg_spinbox.get())
+            # data[0]['params']['args']['height'] = int(prompt_size_height_box.get())
+            # data[0]['params']['args']['width'] = int(prompt_size_width_box.get())
+            # data[0]['params']['args']['n_iter'] = int(prompt_n_iterations.get())
+            # data[0]['params']['args']['seed'] = int(prompt_seed.get())
+            # data[0]['params']['args']['batch_size'] = int(prompt_batch_size.get())
+            # data[0]['params']['checkpoint'] = prompt_checkpoint.get()
+            # data[0]['script_params'] = prompt_custom_params.get("1.0", "end-1c")
 
             
             characters = string.ascii_lowercase + string.digits  # Define the character set
@@ -562,14 +700,11 @@ def process_parameters(pageExists, prompt_list, prompt_data, function_index, fro
             data[0]['id'] = f'task({task_id})'
             data[0]['params']['args']['id_task'] = f'task({task_id})'
 
-            print(f'data:{data}')
 
             if pageExists == True:
-                print(f'prompt_list: {prompt_list}')
                 prompt_list.extend(data)
                 json.dump(prompt_list, file)
             else:
-                print(f'data:{data}')
                 json.dump(data, file)
 
 
@@ -597,7 +732,7 @@ def update_button_positions(event=None):
     output_directory_label1.place(x=2*spacing + button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
     output_directory_label2.place(x=3*spacing + 2*button_width - 50, y=window_height - (2 * button_height + button_spacing + 20))
 
-def set_face_model(event):
+def set_custom_params(event):
     global face_model_dropdown, face_model_params
     with open("face_model_params.json", "r") as file:
         full_face_model_params = json.load(file)
@@ -606,6 +741,9 @@ def set_face_model(event):
 
         if face_model_text in full_face_model_params:
             face_model_params = full_face_model_params[face_model_text]
+        if prompt_custom_params is not None:
+            prompt_custom_params.delete("1.0", "end")
+            prompt_custom_params.insert("1.0", face_model_params)
 
 def save_history():
     global history
@@ -656,7 +794,7 @@ def load_prompt_window():
     upscale_bool = False
 
     # Hide the current buttons
-    page_name = "queueBuilder"
+    page_name = "queueBuilder"                               
     image_count_label.destroy()
     input_directory_label.destroy()
     output_directory_label1.destroy()
@@ -672,7 +810,7 @@ def load_prompt_window():
     button4.destroy()
     button5.destroy()
     button6.destroy()
-    face_model_dropdown.destroy()
+    # face_model_dropdown.destroy()
 
     #checkpoint
     prompt_checkpoint_label = tk.Label(root, text="Checkpoint", bg="black", fg="white")
@@ -680,16 +818,29 @@ def load_prompt_window():
     prompt_checkpoint = ttk.Combobox(root)
     prompt_checkpoint['values']= ('dreamshaper_8.safetensors [879db523c3]', 'dreamshaper_8.safetensors [879db523c3]')
     prompt_checkpoint.set('dreamshaper_8.safetensors [879db523c3]') # set the default option
-    prompt_checkpoint.grid(row=1, column=0, sticky='nw', padx=15, pady=(2,20))
+    prompt_checkpoint.grid(row=1, column=0, sticky='nw', padx=(15,0), pady=(2,20))
+
+    prompt_checkpoint_checkbox = tk.Checkbutton(root, variable=prompt_checkpoint_var)
+    prompt_checkpoint_checkbox.grid(row=1, column=0, sticky='nw', padx=(165,15), pady=(3,5))
     
     #prompt
     prompt_positive_text_box = tk.Text(root, width=50, height=5)
     prompt_positive_text_box.insert("1.0", "Positive Prompt")
     prompt_positive_text_box.grid(row=2, column=0, sticky='nw', padx=15, pady=(2, 20), columnspan=3, rowspan=2)
 
+    prompt_positive_radio_front.grid(row=2, column=0, sticky='nw', padx=(425,0), pady=(0,5))
+    prompt_positive_radio_none.grid(row=2, column=0, sticky='nw', padx=(425,0), pady=(30,5))
+    prompt_positive_radio_back.grid(row=2, column=0, sticky='nw', padx=(425,0), pady=(60,5))
+    prompt_positive_radio_button.set("none")
+
     prompt_negative_text_box = tk.Text(root, width=50, height=5)
     prompt_negative_text_box.insert("1.0", "Negative Prompt")
     prompt_negative_text_box.grid(row=4, column=0, sticky='nw', padx=15, pady=(2,20), columnspan=3, rowspan=2)
+
+    prompt_negative_radio_front.grid(row=4, column=0, sticky='nw', padx=(425,0), pady=(0,5))
+    prompt_negative_radio_none.grid(row=4, column=0, sticky='nw', padx=(425,0), pady=(30,5))
+    prompt_negative_radio_back.grid(row=4, column=0, sticky='nw', padx=(425,0), pady=(60,5))
+    prompt_negative_radio_button.set("none")
 
     # create dropdown menu
     prompt_sampler_text_box = tk.Label(root, text="Sampler", bg="black", fg="white")
@@ -700,68 +851,212 @@ def load_prompt_window():
     sampler_dropdown.set(PROMPT_SAMPLER_DEFAULT) # set the default option
     sampler_dropdown.grid(row=7, column=0, sticky='nw', padx=15, pady=(2,20))
 
+    prompt_sampler_checkbox = tk.Checkbutton(root, variable=prompt_sampler_var)
+    prompt_sampler_checkbox.grid(row=7, column=0, sticky='nw', padx=(165,15), pady=(3,5))
+
 
     #steps
     prompt_steps_text_box_label = tk.Label(root, text="Steps", bg="black", fg="white")
     prompt_steps_text_box_label.grid(row=6, column=1, sticky='nw', padx=15, pady=(5,5))
-    prompt_steps_text_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_STEPS_DEFAULT)
+    prompt_steps_text_box = tk.Spinbox(root, from_=1, to=150, textvariable=PROMPT_STEPS_DEFAULT)
     prompt_steps_text_box.grid(row=7, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_steps_checkbox = tk.Checkbutton(root, variable=prompt_steps_var)
+    prompt_steps_checkbox.grid(row=7, column=1, sticky='nw', padx=(165,15), pady=(3,5))
 
     #height and width
     prompt_size_height_box_label = tk.Label(root, text="Height", bg="black", fg="white")
     prompt_size_height_box_label.grid(row=8, column=0, sticky='nw', padx=15, pady=(5,5))
-
     
-    prompt_size_height_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SIZE_HEIGHT_DEFAULT)
+    prompt_size_height_box = tk.Spinbox(root, from_=64, to=2048, textvariable=PROMPT_SIZE_HEIGHT_DEFAULT)
     prompt_size_height_box.grid(row=9, column=0, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_size_height_checkbox = tk.Checkbutton(root, variable=prompt_size_height_var)
+    prompt_size_height_checkbox.grid(row=9, column=0, sticky='nw', padx=(165,15), pady=(3,5))
 
     prompt_size_width_box_label = tk.Label(root, text="Width", bg="black", fg="white")
     prompt_size_width_box_label.grid(row=8, column=1, sticky='nw', padx=15, pady=(5,5))
 
-    prompt_size_width_box = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_SIZE_WIDTH_DEFAULT)
+    prompt_size_width_box = tk.Spinbox(root, from_=64, to=2048, textvariable=PROMPT_SIZE_WIDTH_DEFAULT)
     prompt_size_width_box.grid(row=9, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_size_width_checkbox = tk.Checkbutton(root, variable=prompt_size_width_var)
+    prompt_size_width_checkbox.grid(row=9, column=1, sticky='nw', padx=(165,15), pady=(3,5))
 
     #batch count and iterations
 
     prompt_n_iterations_label = tk.Label(root, text="Iterations", bg="black", fg="white")
     prompt_n_iterations_label.grid(row=10, column=0, sticky='nw', padx=15, pady=(5,5))
-    prompt_n_iterations = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_N_ITERATIONS_DEFAULT)
+    prompt_n_iterations = tk.Spinbox(root, from_=1, to=100, textvariable=PROMPT_N_ITERATIONS_DEFAULT)
     prompt_n_iterations.grid(row=11, column=0, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_iterations_checkbox = tk.Checkbutton(root, variable=prompt_iterations_var)
+    prompt_iterations_checkbox.grid(row=11, column=0, sticky='nw', padx=(165,15), pady=(3,5))
 
     prompt_batch_size_label = tk.Label(root, text="Batch Size", bg="black", fg="white")
     prompt_batch_size_label.grid(row=10, column=1, sticky='nw', padx=15, pady=(5,5))
-    prompt_batch_size = tk.Spinbox(root, from_=0, to=1000, textvariable=PROMPT_BATCH_SIZE_DEFAULT)
+    prompt_batch_size = tk.Spinbox(root, from_=1, to=8, textvariable=PROMPT_BATCH_SIZE_DEFAULT)
     prompt_batch_size.grid(row=11, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_batch_size_checkbox = tk.Checkbutton(root, variable=prompt_batch_size_var)
+    prompt_batch_size_checkbox.grid(row=11, column=1, sticky='nw', padx=(165,15), pady=(3,5))
     
     cfg_spinbox_label = tk.Label(root, text="CFG Scale", bg="black", fg="white")
     cfg_spinbox_label.grid(row=12, column=0, sticky='nw', padx=15, pady=(5,5))
-    cfg_spinbox = tk.Spinbox(root, from_=0, to=100, textvariable=PROMPT_CFG_SCALE_DEFAULT, increment=0.1)
+    cfg_spinbox = tk.Spinbox(root, from_=1, to=30, textvariable=PROMPT_CFG_SCALE_DEFAULT, increment=0.1)
     cfg_spinbox.grid(row=13, column=0, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_cfg_scale_checkbox = tk.Checkbutton(root, variable=prompt_cfg_scale_var)
+    prompt_cfg_scale_checkbox.grid(row=13, column=0, sticky='nw', padx=(165,15), pady=(3,5))
 
     #seed
     prompt_seed_label = tk.Label(root, text="Seed", bg="black", fg="white")
     prompt_seed_label.grid(row=12, column=1, sticky='nw', padx=15, pady=(5,5))
-    prompt_seed = tk.Spinbox(root, from_=-1.5, to=1000, textvariable=PROMPT_SEED_DEFAULT)
+    prompt_seed = tk.Spinbox(root, from_=-1, to=9999999999, textvariable=PROMPT_SEED_DEFAULT)
     prompt_seed.grid(row=13, column=1, sticky='nw', padx=15, pady=(2,20))
+
+    prompt_seed_checkbox = tk.Checkbutton(root, variable=prompt_seed_var)
+    prompt_seed_checkbox.grid(row=13, column=1, sticky='nw', padx=(165,15), pady=(3,5))
 
     #propmt params
     prompt_params_label = tk.Label(root, text="Custom Params", bg="Black", fg="white")
     prompt_params_label.grid(row=14, column=0, sticky='nw', padx=15, pady=(5,5))
+
+    prompt_custom_params_checkbox = tk.Checkbutton(root, variable=prompt_custom_params_var)
+    prompt_custom_params_checkbox.grid(row=14, column=0, sticky='nw', padx=(675,15), pady=(3,5))
+
     prompt_custom_params = tk.Text(root, width=85, height=11)
     prompt_custom_params.grid(row=15, column=0, sticky='nw', padx=15, pady=(2,20), columnspan=4, rowspan=3)
     prompt_custom_params.insert("1.0", "eJzNU0tv1DAQTtTN7nYfLV0Q78cee6GCnrhVdBGViJQDEsfK8iZmxyKxLcfZrZCQOMbIR3OAX8eVXwGThwCpfwAnGWsm45lvvhl/Hnz9she069Ifx4F1gb84+/mtWd/f/MJlWxkHzfPJH7sRL0kqmPG1GzFB1znLvHXDQmZVzrwbCClwi1BnOapJqw53jG/A+Dh0ES/ohvnETTUr+UdGGk/vDldaqiUV2fJta/ZunMsd2WpaYPi50jJlZSk1wVO+heSmBlABmWeEXjete9PBpuIZFSkjpaEaIQRu9sfERNZgmit+xXKimH7PUoP5ZqkURsu8Bzc+p3njn3l3lwtFuTAkRbwElcqQriLr9kETqQyXAgs/lwa8OyrplpGMGYzLMlJQhbwtaLZtw5GOFi42yEeExFYcf0+6qF3qYckL1RA7W1OTQper9BC6iaxM45dx3ahIl1Rrmn7wtsI+wV4NAwtR3xAY9a2A/TiESQLT64zD3MJBSxocdtuNbjuKA1jgsZsWbv3DBdy2cKcvFO7VcD+BBzU8hEfwGEJ4gt/yv4KSWBc+8/DULbgod1Rhu8nz0xcnUogr7yYr5Pu11AXTOBJ1jzEO49DWKHH67cXZj+6q1NYNVu9evfQWp6kvJkysdWMlS274trkBqSwKiuOG5qgbPcBgEF6i7a+srcUgNkn6Nz5lJ78BBUFmzA==")
 
-    #Add to Queue button    
+    face_model_dropdown.current(0)
+    face_model_dropdown.grid(row=14, column=0, sticky='nw', padx=(105, 15), pady=(4,20), rowspan=2)
+
+    prompt_add_variation_button = tk.Button(root, text="Add Variation", command=lambda: add_variation())
+    prompt_variation_dropdown = ttk.Combobox(root)
+    prompt_add_variation_button.grid(row=19, column=0, sticky='nw', padx=(15,15), pady=(3,5))
+    # prompt_variation_dropdown.grid(row=19, column=0, sticky='nw', padx=(100, 15), pady=(4,20), rowspan=2)
+
+
+    #Add to Queue button
     prompt_add_to_queue_button = tk.Button(root, text="Add to Queue", command=lambda:run_process_parameters(pageExists, prompt_list, data))
-    prompt_add_to_queue_button.grid(row=19, column=0, sticky='nw', padx=15, pady=(5,5))
+    prompt_add_to_queue_button.grid(row=19, column=0, sticky='nw', padx=(613,0), pady=(5,5))
+
+    prompt_add_variation_text_box.grid(row=19, column=0, sticky='nw', padx=(100, 15), pady=(4,20))
+
+    print_variations()
+
+def write_new_variations():
+    prompt_new_variations['name'] = prompt_add_variation_text_box.get("1.0", "end-1c")
+    if prompt_checkpoint_var.get() == 1:
+        prompt_new_variations['checkpoint'] = prompt_checkpoint.get()
+    if prompt_positive_radio_button.get() == 'front':
+        prompt_new_variations['positive_front'] = prompt_positive_text_box.get("1.0", "end-1c")
+    elif prompt_positive_radio_button.get() == 'end':
+        prompt_new_variations['positive_back'] = prompt_positive_text_box.get("1.0", "end-1c")
+    if prompt_negative_radio_button.get() == 'front':
+        prompt_new_variations['negative_front'] = prompt_negative_text_box.get("1.0", "end-1c")
+    elif prompt_negative_radio_button.get() == 'end':
+        prompt_new_variations['negative_back'] = prompt_negative_text_box.get("1.0", "end-1c")
+    if prompt_sampler_var.get() == 1:
+        prompt_new_variations['sampler'] = sampler_dropdown.get()
+    if prompt_steps_var.get() == 1:
+        prompt_new_variations['steps'] = prompt_steps_text_box.get()
+    if prompt_size_height_var.get() == 1:
+        prompt_new_variations['height'] = prompt_size_height_box.get()
+    if prompt_size_width_var.get() == 1:
+        prompt_new_variations['width'] = prompt_size_width_box.get()
+    if prompt_iterations_var.get() == 1:
+        prompt_new_variations['n_iter'] = prompt_n_iterations.get()
+    if prompt_batch_size_var.get() == 1:
+        prompt_new_variations['batch_size'] = prompt_batch_size.get()
+    if prompt_cfg_scale_var.get() == 1:
+        prompt_new_variations['cfg_scale'] = cfg_spinbox.get()
+    if prompt_seed_var.get() == 1:
+        prompt_new_variations['seed'] = prompt_seed.get()
+    if prompt_custom_params_var.get() == 1:
+        prompt_new_variations['custom_params'] = prompt_custom_params.get("1.0", "end-1c")
+
+def add_variation():
+    global variation_data
+    write_new_variations()
+
+    # Check if 'name' is the only key in prompt_new_variations
+    if list(prompt_new_variations.keys()) == ['name']:
+        return
+
+    if os.path.isfile('variations.json'):
+        with open('variations.json', 'r+') as file:
+            if list(prompt_new_variations.keys()) != ['name']:
+                print(f"line 963 prompt_new_variations: {prompt_new_variations}")
+                variation_data.append(prompt_new_variations.copy())
+            json.dump(variation_data, file)
+    else:
+        with open('variations.json', 'w') as file:
+            json.dump([prompt_new_variations], file)
+        with open('variations.json', 'r') as file:
+            variation_data = json.load(file)
+    x = 0
+    while x < len(labels_and_Checkbuttons):
+        labels_and_Checkbuttons[x]['checkbox'].destroy()
+        labels_and_Checkbuttons[x]['label'].destroy()
+        labels_and_Checkbuttons[x]['button'].destroy()
+        x += 1
+    print(f"line 977 variation_data: {variation_data}")
+    print_variations()
+
+def print_variations():
+    global labels_and_Checkbuttons, variations_checkbox_vars
+    if variation_data is None or len(variation_data) == 0:
+        return
+    y = 0
+    while y < len(variation_data):
+        # Create a new IntVar for the checkbox
+        checkbox_var = tk.IntVar()
+        variations_checkbox_vars.append(checkbox_var)
+
+        labels_and_Checkbuttons[y] = {'label': tk.Label(root, text=str(variation_data[y]['name'])[:80], bg="black", fg="white"), 'checkbox': tk.Checkbutton(root, variable=checkbox_var), 'button': tk.Button(root, text="Delete", command=lambda y=y: delete_variation(y))}
+        y += 1
+    z = 0
+    while z < len(labels_and_Checkbuttons):
+        labels_and_Checkbuttons[z]['checkbox'].grid(row=z, column=2, sticky='nw', padx=(5,15), pady=(3,5))
+        labels_and_Checkbuttons[z]['label'].grid(row=z, column=2, sticky='nw', padx=(50,15), pady=(3,5))
+        labels_and_Checkbuttons[z]['button'].grid(row=z, column=2, sticky='nw', padx=(550,15), pady=(3,5))
+        z += 1
+    prompt_new_variations.clear()
     
+    
+def delete_variation(index):
+    global labels_and_Checkbuttons, variation_data
+    variation_data.pop(index)
+    with open('variations.json', 'w') as file:
+        json.dump(variation_data, file)
+    x = 0
+    while x < len(labels_and_Checkbuttons):
+        labels_and_Checkbuttons[x]['checkbox'].destroy()
+        labels_and_Checkbuttons[x]['label'].destroy()
+        labels_and_Checkbuttons[x]['button'].destroy()
+        x += 1
+    labels_and_Checkbuttons.clear()
+    print_variations()
 
 def run_process_parameters(pageExists, prompt_list, data):
+    prompt_list = []
     if os.path.isfile(prompt_list_file_path):
         with open(prompt_list_file_path, 'r') as file:
             prompt_list = json.load(file)
             pageExists = True
-    process_parameters(pageExists, prompt_list, data, 0, True)    
+    process_parameters(pageExists, prompt_list, data, None, True) 
+    x = 0 
+    while x < len(variation_data):
+        print(f"line 1025 x: {x}")
+        if variations_checkbox_vars[x].get() == 1:
+            if os.path.isfile(prompt_list_file_path):
+                with open(prompt_list_file_path, 'r') as file:
+                    prompt_list = json.load(file)
+                    pageExists = True
+            process_parameters(pageExists, prompt_list, data, x, True)
+        x += 1
 
 def change_dropdown(*args):
     print(sampler_dropdown.get())
@@ -775,7 +1070,7 @@ button_spacing = 50
 window_height = root.winfo_height()
 
 
-def create_main_content():  
+def create_main_content():
     global undo_button, deleteButton, setMainDir, button1, setButton1, button2, setButton2, button3, button4, button5, button6, face_model_dropdown, page_name, image_count_label, input_directory_label_text, input_directory_label, output_directory_label_text1, output_directory_label1, output_directory_label_text2, output_directory_label2, output_directory_label_text3, face_model_dropdown
 
     page_name = "main"
@@ -878,7 +1173,7 @@ def create_main_content():
     selected_key = tk.StringVar()
 
     # Create the dropdown
-    face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
+    face_model_dropdown = ttk.Combobox(root, textvariable=selected_key, width=90)
 
     # Populate the dropdown with the keys
     face_model_dropdown['values'] = face_model_keys
@@ -887,8 +1182,8 @@ def create_main_content():
     if face_model_keys:
         face_model_dropdown.current(0)
 
-    face_model_dropdown.bind("<<ComboboxSelected>>", set_face_model)
-    set_face_model(event=None)
+    face_model_dropdown.bind("<<ComboboxSelected>>", set_custom_params)
+    set_custom_params(event=None)
     # Place the dropdown in the window
     face_model_dropdown.place(x=4*spacing + 3*button_width, y=window_height -(button_height + button_spacing), width=800, height=50, anchor="s")
 
