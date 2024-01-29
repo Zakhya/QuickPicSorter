@@ -793,7 +793,7 @@ def load_prompt_window():
     save_history_button.destroy()
     load_history_button.destroy()
     load_prompt_window_button.destroy()
-    face_model_dropdown.destroy()
+    # face_model_dropdown.destroy()
 
     # Add an extra row and column with a larger weight
     root.grid_columnconfigure(0, weight=1)
@@ -953,17 +953,17 @@ def load_prompt_window():
     selected_key = tk.StringVar()
 
     # Create the dropdown
-    prompt_face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
+    # face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
 
     # Populate the dropdown with the keys
-    prompt_face_model_dropdown['values'] = face_model_keys
+    face_model_dropdown['values'] = face_model_keys
 
     # Set the first key as the initially selected value
     if face_model_keys:
-        prompt_face_model_dropdown.current(0)
+        face_model_dropdown.current(0)
 
-    prompt_face_model_dropdown.grid(row=11, column=1, sticky='nsew')
-    prompt_face_model_dropdown.bind("<<ComboboxSelected>>", set_custom_params)
+    face_model_dropdown.grid(row=11, column=1, sticky='nsew')
+    face_model_dropdown.bind("<<ComboboxSelected>>", set_custom_params)
 
     prompt_add_variation_button = tk.Button(root, text="Add Variation", command=lambda: add_variation())
     prompt_variation_dropdown = ttk.Combobox(root)
@@ -1239,7 +1239,7 @@ def create_main_content():
     selected_key = tk.StringVar()
 
     # Create the dropdown
-    face_model_dropdown = ttk.Combobox(root, textvariable=selected_key, width=90)
+    face_model_dropdown = ttk.Combobox(root, textvariable=selected_key)
 
     # Populate the dropdown with the keys
     face_model_dropdown['values'] = face_model_keys
